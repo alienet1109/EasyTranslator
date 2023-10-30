@@ -45,3 +45,17 @@ pip install -r requirements.txt
 python EasyTranslator.py
 ```
 然后在网页中打开程序给出的网址（eg: http://127.0.0.1:7860）
+
+## 演示
+
+![image](https://github.com/alienet1109/EasyTranslator/blob/master/resources/id%20search.gif)
+
+![image](https://github.com/alienet1109/EasyTranslator/blob/master/resources/name.gif)
+
+![image](https://github.com/alienet1109/EasyTranslator/blob/master/resources/last%26next%20text.gif)
+
+![image](https://github.com/alienet1109/EasyTranslator/blob/master/resources/replace.gif)
+
+![image](https://github.com/alienet1109/EasyTranslator/blob/master/resources/api%20key%20setting.gif)
+
+![image](https://github.com/alienet1109/EasyTranslator/blob/master/resources/derive%20text.gif)

@@ -1,0 +1,18 @@
+{
+ "last_edited_id": "100001002",
+ "file_path": "./EasyTranslator/example_text.json",
+ "name_dict_path": "NAME DICT PATH(OPTIONAL)",
+ "replace_dict_path": "REPLACE DICT PATH(OPTIONAL)",
+ "output_txt_path": "./output.txt",
+ "seperator_long": "===============================",
+ "seperator_short": "---------------------",
+ "baidu_api_settings": {
+  "api_id": "YOUR BAIDU API ID",
+  "api_key": "YOUR BAIDU API KEY",
+  "from_lang": "jp",
+  "to_lang": "zh"
+ },
+ "openai_api_settings": {
+  "openai_api_key": "YOUR OPENAI API KEY"
+ }
+}

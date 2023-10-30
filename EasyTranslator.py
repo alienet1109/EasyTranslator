@@ -6,7 +6,7 @@ import json
 from tqdm import tqdm
 
 # Initialization
-config_path = './EasyTranslator/config.json'
+config_path = './config.json'
 args = load_config(config_path)
 path = args['file_path']
 print(path)
@@ -92,7 +92,7 @@ def next_text():
         id_idx += 1
     return id_lis[id_idx]
 
-def replace(text_gpt,text_final,text_id):
+def replace(text_gpt,text_baidu,text_final,text_id):
     if not text_id:
         text_id = id_lis[id_idx]
     if osp.exists(replace_dict_path):
@@ -104,10 +104,12 @@ def replace(text_gpt,text_final,text_id):
             f.close()
     for key,value in replace_dic.items():
         text_gpt = text_gpt.replace(key, value)
+        text_baidu = text_baidu.replace(key, value)
         text_final = text_final.replace(key, value)
     dic[text_id]['gpt3'] = text_gpt
+    dic[text_id]['baidu'] = text_baidu
     dic[text_id]["text_CN"] = text_final
-    return text_gpt,text_final
+    return text_gpt,text_baidu,text_final
 
 def change_final(text,text_id):
     dic[text_id]["text_CN"] = text
@@ -144,6 +146,7 @@ def submit_api(baidu_api_id, baidu_api_key,openai_api_key):
         args['openai_api_settings']['openai_api_key'] = openai_api_key
     with open(config_path, 'w', encoding ='utf8') as json_file:
         json.dump(args,json_file,indent = 1,ensure_ascii = False)
+    return baidu_api_id, baidu_api_key,openai_api_key
         
 # Derive text
 def derive_text(radio_type, text_start_id, text_end_id,text_seperator_long,text_seperator_short, output_txt_path):
@@ -256,8 +259,8 @@ with gr.Blocks() as demo:
     button_down.click(next_text, outputs = text_id)
     button_translate_gpt.click(gpt_translate, inputs=[text_input,text_id], outputs=text_gpt)
     button_translate_baidu.click(baidu_translate, inputs=[text_input,text_id], outputs=text_baidu)
-    button_replace.click(replace, inputs = [text_gpt,text_final,text_id], outputs=[text_gpt,text_final])
-    button_api_submit.click(submit_api, inputs = [text_baidu_api_id,text_baidu_api_key,text_openai_api])
+    button_replace.click(replace, inputs = [text_gpt,text_baidu,text_final,text_id], outputs=[text_gpt,text_baidu,text_final])
+    button_api_submit.click(submit_api, inputs = [text_baidu_api_id,text_baidu_api_key,text_openai_api],outputs=[text_baidu_api_id,text_baidu_api_key,text_openai_api])
     button_save.click(save_json)
     button_derive_text.click(derive_text,
                              inputs = [radio_type, text_start_id, text_end_id,

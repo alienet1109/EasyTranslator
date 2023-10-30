@@ -48,14 +48,14 @@ python EasyTranslator.py
 
 ## 演示
 
-![image](https://github.com/alienet1109/EasyTranslator/blob/master/resources/id%20search.gif)
+![image](https://github.com/alienet1109/EasyTranslator/blob/master/assets/id%20search.gif)
 
-![image](https://github.com/alienet1109/EasyTranslator/blob/master/resources/name.gif)
+![image](https://github.com/alienet1109/EasyTranslator/blob/master/assets/name.gif)
 
-![image](https://github.com/alienet1109/EasyTranslator/blob/master/resources/last%26next%20text.gif)
+![image](https://github.com/alienet1109/EasyTranslator/blob/master/assets/last%26next%20text.gif)
 
-![image](https://github.com/alienet1109/EasyTranslator/blob/master/resources/replace.gif)
+![image](https://github.com/alienet1109/EasyTranslator/blob/master/assets/replace.gif)
 
-![image](https://github.com/alienet1109/EasyTranslator/blob/master/resources/api%20key%20setting.gif)
+![image](https://github.com/alienet1109/EasyTranslator/blob/master/assets/api%20key%20setting.gif)
 
-![image](https://github.com/alienet1109/EasyTranslator/blob/master/resources/derive%20text.gif)
+![image](https://github.com/alienet1109/EasyTranslator/blob/master/assets/derive%20text.gif)

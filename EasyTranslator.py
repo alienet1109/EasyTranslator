@@ -208,7 +208,7 @@ def derive_text(radio_type, text_start_id, text_end_id,text_seperator_long,text_
 
 def main():
     with gr.Blocks() as demo:
-        gr.Markdown("# <center>EasyTranslatorv0.2.1-Beta</center>",visible=True)
+        gr.Markdown("# <center>EasyTranslatorv0.2.2-Beta</center>",visible=True)
         # 文本编辑页
         with gr.Tab('文本编辑'):
             
@@ -239,7 +239,7 @@ def main():
                         button_replace = gr.Button("Replace")
          
             gr.Markdown('## 文档导出区')
-            radio_type = gr.Radio(choices = ["中文|纯文本","中文|单次人名文本", "中文|人名文本", "双语|人名文本",""],label = '导出类型')
+            radio_type = gr.Radio(choices = ["中文|纯文本","中文|单次人名文本", "中文|人名文本", "双语|人名文本"],label = '导出类型')
             with gr.Row():
                 text_start_id = gr.Textbox(label = '起始句id')
                 text_end_id = gr.Textbox(label = '结束句id')

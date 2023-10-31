@@ -1,4 +1,4 @@
-# EasyTranslator 0.1.1-beta
+# EasyTranslator 0.2.2-beta
 基于gradio的汉化辅助工具
 ## 特性
 1. 一键机翻接口，提供复制到剪贴板按钮。

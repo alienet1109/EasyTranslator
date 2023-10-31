@@ -1,15 +1,16 @@
 import openai
 import gradio as gr
+
 from utils import *
 from os import path as osp
 import json
 from tqdm import tqdm
+import csv
 
 # Initialization
 config_path = './config.json'
 args = load_config(config_path)
 path = args['file_path']
-print(path)
 replace_dict_path = args['replace_dict_path']
 name_dict_path = args['name_dict_path']
 
@@ -34,7 +35,7 @@ if osp.exists(replace_dict_path):
 # Dict for name
 name_dic = {}
 if osp.exists(name_dict_path):
-    with open(name_dict_path, "r", encoding="gbk") as f:
+    with open(name_dict_path, "r", encoding="utf-8") as f:
             for line in f:
                 item = line.split(' ')
                 item[1] = item[1].replace('\n','')
@@ -62,6 +63,7 @@ def baidu_translate(text,text_id):
         translation = f'Error:{e}'
     return translation
 
+# Other actions
 def change_id(text_id):
     global id_idx
     args['last_edited_id'] = text_id
@@ -189,81 +191,113 @@ def derive_text(radio_type, text_start_id, text_end_id,text_seperator_long,text_
                     f.write(dic[key]['text_CN']+'\n')
                     f.write('\n')
 
-with gr.Blocks() as demo:
-    with gr.Tab('编辑页'):
-        
-        gr.Markdown('## 文本编辑及保存区')
-        with gr.Row():
-            text_id = gr.Textbox(label = '文本编号')
-            button_load = gr.Button('Load last edited position')
-        with gr.Row():
-            with gr.Column():
-                text_name = gr.Textbox(label = 'Name')
-                
-                text_input = gr.Textbox(label = 'Text', lines=10)
-                
-            with gr.Column():
-                text_name_cn = gr.Textbox(label = 'Name_CN')
-                with gr.Row():
-                    text_gpt = gr.Textbox(label = 'GPT', lines=3,show_copy_button=True,interactive = True)
-                    button_translate_gpt = gr.Button("Translate(GPT)")
-                with gr.Row():
-                    text_baidu = gr.Textbox(label = 'Baidu', lines=3,show_copy_button=True,interactive = True)
-                    
-                    button_translate_baidu = gr.Button("Translate(Baidu)")
-                text_final = gr.Textbox(label = "Text_CN", lines=3,show_copy_button=True,interactive = True)
-                with gr.Row():
-                    button_up = gr.Button('↑')
-                    button_down = gr.Button('↓')
-                    
-                    button_replace = gr.Button("Replace")
-                    
-        with gr.Row():
-            button_save = gr.Button("Save JSON")
-        
-        
-        gr.Markdown('## 文档导出区')
-        radio_type = gr.Radio(choices = ["中文|纯文本", "中文|人名文本", "双语|人名文本"],label = '导出类型')
-        with gr.Row():
-            text_start_id = gr.Textbox(label = '起始句id')
-            text_end_id = gr.Textbox(label = '结束句id')
-        with gr.Row():
-            text_seperator_long = gr.Textbox(label = '句间分隔符(长)', value = args['seperator_long'])
-            text_seperator_short = gr.Textbox(label = '双语间分隔符(短)', value = args['seperator_short'])
-        text_output_path = gr.Textbox(label = '输出文件路径', value = args['output_txt_path'])
-        button_derive_text = gr.Button("导出文本")
-        
-        
-    with gr.Tab('文件上传（未启用）'):
-        with gr.Row():
-            file_json = gr.File(file_count='single',file_types=['json'])
+def main():
+    with gr.Blocks() as demo:
+        with gr.Tab('编辑页'):
             
-    with gr.Tab('API Settings'):
-        gr.Markdown('## 百度 API')
-        text_baidu_api_id = gr.Textbox(label='Baidu API Id',value = args['baidu_api_settings']['api_id'])
-        text_baidu_api_key = gr.Textbox(label='Baidu API Key', value = args['baidu_api_settings']['api_key'])
-        gr.Markdown('## OPENAI API')
-        text_openai_api = gr.Textbox(label='OPENAI API Key',value = args['openai_api_settings']['openai_api_key'])
-        button_api_submit = gr.Button('Submit')
+            gr.Markdown('## 文本编辑及保存区')
+            with gr.Row():
+                text_id = gr.Textbox(label = '文本编号')
+                button_load = gr.Button('Load last edited position')
+            with gr.Row():
+                with gr.Column():
+                    text_name = gr.Textbox(label = 'Name')
+                    
+                    text_input = gr.Textbox(label = 'Text', lines=10)
+                    
+                with gr.Column():
+                    text_name_cn = gr.Textbox(label = 'Name_CN')
+                    with gr.Row():
+                        text_gpt = gr.Textbox(label = 'GPT', lines=3,show_copy_button=True,interactive = True)
+                        button_translate_gpt = gr.Button("Translate(GPT)")
+                    with gr.Row():
+                        text_baidu = gr.Textbox(label = 'Baidu', lines=3,show_copy_button=True,interactive = True)
+                        
+                        button_translate_baidu = gr.Button("Translate(Baidu)")
+                    text_final = gr.Textbox(label = "Text_CN", lines=3,show_copy_button=True,interactive = True)
+                    with gr.Row():
+                        button_up = gr.Button('↑')
+                        button_down = gr.Button('↓')
+                        
+                        button_replace = gr.Button("Replace")
+                        
+            with gr.Row():
+                button_save = gr.Button("Save JSON")
+            
+            
+            gr.Markdown('## 文档导出区')
+            radio_type = gr.Radio(choices = ["中文|纯文本", "中文|人名文本", "双语|人名文本"],label = '导出类型')
+            with gr.Row():
+                text_start_id = gr.Textbox(label = '起始句id')
+                text_end_id = gr.Textbox(label = '结束句id')
+            with gr.Row():
+                text_seperator_long = gr.Textbox(label = '句间分隔符(长)', value = args['seperator_long'])
+                text_seperator_short = gr.Textbox(label = '双语间分隔符(短)', value = args['seperator_short'])
+            text_output_path = gr.Textbox(label = '输出文件路径', value = args['output_txt_path'])
+            button_derive_text = gr.Button("导出文本")
+            
+            
+        with gr.Tab('文件转换'):
+            
+            gr.Markdown("## CSV to JSON(支持批量上传)")
+            with gr.Row():
+                with gr.Column():
+                    
+                    file_target_csv = gr.File(file_types=['csv'],file_count = 'multiple', label="Input CSV")
+                    with gr.Row():
+                        text_text_column = gr.Textbox(label='text列名',value = args['csv_column_name']['text'])
+                        text_name_column = gr.Textbox(label='name列名',value = args['csv_column_name']['name'])
+                        text_id_column = gr.Textbox(label='id列名(optional)',value = args['csv_column_name']['id'],placeholder = '若不指定或找不到指定列，程序会自动编号')
+                    button_convert2json =  gr.Button('Convert')
+                file_result_json = gr.File(file_types=['json'],label="Output JSON",interactive=False)
+            gr.Markdown("## JSON to CSV(未启用)")
+            with gr.Row():
+                with gr.Column():
+                    file_target_json = gr.File(file_types=['json'],file_count = 'multiple',label="Input JSON")
+                    button_convert2csv =  gr.Button('Convert')
+                file_result_csv = gr.File(file_types=['jcsv'],label="Output CSV",interactive=False)
+            
+            
+                
+                
+        with gr.Tab('API Settings'):
+            gr.Markdown('## 百度 API')
+            text_baidu_api_id = gr.Textbox(label='Baidu API Id',value = args['baidu_api_settings']['api_id'])
+            text_baidu_api_key = gr.Textbox(label='Baidu API Key', value = args['baidu_api_settings']['api_key'])
+            gr.Markdown('## OPENAI API')
+            text_openai_api = gr.Textbox(label='OPENAI API Key',value = args['openai_api_settings']['openai_api_key'])
+            button_api_submit = gr.Button('Submit')
+        
+        # 文本框行为
+        text_id.change(change_id, inputs = text_id,
+                    outputs = [text_input,text_name,text_name_cn,text_gpt,text_baidu,text_final])
+        text_final.change(change_final,inputs = [text_final,text_id])
+        text_name_cn.change(change_name,inputs = [text_name,text_name_cn,text_id])
+        
+        # 按钮行为
+        button_load.click(load_last_position,outputs = text_id)
+        button_up.click(last_text, outputs = text_id)
+        button_down.click(next_text, outputs = text_id)
+        button_translate_gpt.click(gpt_translate, 
+                                inputs=[text_input,text_id], outputs=text_gpt)
+        button_translate_baidu.click(baidu_translate, 
+                                    inputs=[text_input,text_id], outputs=text_baidu)
+        button_replace.click(replace, 
+                            inputs = [text_gpt,text_baidu,text_final,text_id], 
+                            outputs=[text_gpt,text_baidu,text_final])
+        button_api_submit.click(submit_api, 
+                                inputs = [text_baidu_api_id,text_baidu_api_key,text_openai_api],
+                                outputs=[text_baidu_api_id,text_baidu_api_key,text_openai_api])
+        button_save.click(save_json)
+        button_derive_text.click(derive_text,
+                                inputs = [radio_type, text_start_id, text_end_id,
+                                        text_seperator_long,text_seperator_short,text_output_path])
+        button_convert2json.click(convert_to_json, 
+                            inputs = [file_target_csv, text_text_column, text_name_column, text_id_column], 
+                            outputs = file_result_json)
+        
     
-    file_json.upload(upload_json, inputs=file_json)
-    
-    # 文本框行为
-    text_id.change(change_id,text_id,[text_input,text_name,text_name_cn,text_gpt,text_baidu,text_final])
-    text_final.change(change_final,inputs = [text_final,text_id])
-    text_name_cn.change(change_name,inputs = [text_name,text_name_cn,text_id])
-    
-    # 按钮行为
-    button_load.click(load_last_position,outputs = text_id)
-    button_up.click(last_text, outputs = text_id)
-    button_down.click(next_text, outputs = text_id)
-    button_translate_gpt.click(gpt_translate, inputs=[text_input,text_id], outputs=text_gpt)
-    button_translate_baidu.click(baidu_translate, inputs=[text_input,text_id], outputs=text_baidu)
-    button_replace.click(replace, inputs = [text_gpt,text_baidu,text_final,text_id], outputs=[text_gpt,text_baidu,text_final])
-    button_api_submit.click(submit_api, inputs = [text_baidu_api_id,text_baidu_api_key,text_openai_api],outputs=[text_baidu_api_id,text_baidu_api_key,text_openai_api])
-    button_save.click(save_json)
-    button_derive_text.click(derive_text,
-                             inputs = [radio_type, text_start_id, text_end_id,
-                                       text_seperator_long,text_seperator_short,text_output_path])
-demo.launch()
+    demo.launch()
 
+if __name__=="__main__":
+    main()

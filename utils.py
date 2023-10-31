@@ -4,6 +4,8 @@ import requests
 import random
 import json
 from hashlib import md5
+from os import path as osp
+import csv
 
 def load_config(filepath):
     with open(filepath, 'r', encoding='utf-8') as file:
@@ -48,3 +50,51 @@ def get_gpt_completion(prompt, model="gpt-3.5-turbo",api_key = openai_api_key):
         temperature=0, 
     )
     return response.choices[0].message["content"]
+
+def left_pad_zero(number, digit):
+    number_str = str(number)
+    padding_count = digit - len(number_str)
+    padded_number_str = '0' * padding_count + number_str
+    return padded_number_str
+
+def generate_ids(num: int):
+    length = len(str(num))+1
+    ids = []
+    for i in range(num):
+        ids.append(left_pad_zero(i,length))
+    return ids
+
+def convert_to_json(files, text_col, name_col, id_col):
+    out_files = []
+    for file_target in files:
+        dic = {}
+        path = file_target.name
+        dir = osp.dirname(path)
+        base_name = osp.basename(path)
+        new_name = base_name[:-4]+'.json'
+        new_path = osp.join(dir,new_name)
+        with open(path,'r',encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            line_num = sum(1 for _ in open(path,'r',encoding="utf-8"))
+            fieldnames = reader.fieldnames
+            if id_col not in fieldnames:
+                ids = generate_ids(line_num)
+                i = 0
+                for row in reader:
+                    dic[ids[i]]={'name':row[name_col],'text':row[text_col]}
+                    for field in fieldnames:
+                        if field not in (name_col,text_col):
+                            dic[ids[i]][field] = row[field]
+                    i += 1
+            else:
+                for row in reader:
+                    dic[row[id_col]]={'name':row[name_col],'text':row[text_col]}
+                    for field in fieldnames:
+                        if field not in (name_col,text_col,id_col):
+                            dic[row[id_col]][field] = row[field]
+                
+            f.close()
+        with open(new_path, 'w', encoding= "utf-8") as f2:
+            json.dump(dic,f2,indent=1,ensure_ascii=False)
+        out_files.append(new_path)
+    return out_files

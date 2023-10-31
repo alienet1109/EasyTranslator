@@ -6,6 +6,11 @@
  "output_txt_path": "./output.txt",
  "seperator_long": "===============================",
  "seperator_short": "---------------------",
+ "csv_column_name": {
+    "id": "",
+    "text": "text",
+    "name": "name"
+ },
  "baidu_api_settings": {
   "api_id": "YOUR BAIDU API ID",
   "api_key": "YOUR BAIDU API KEY",

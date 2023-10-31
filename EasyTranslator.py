@@ -1,11 +1,12 @@
 import openai
 import gradio as gr
-
-from utils import *
 from os import path as osp
 import json
 from tqdm import tqdm
 import csv
+
+from utils import *
+from themes import *
 
 # Initialization
 config_path = './config.json'
@@ -20,7 +21,6 @@ id_lis = list(dic.keys())
 id_idx = 0
 if args['last_edited_id'] in id_lis:
     id_idx = id_lis.index(args['last_edited_id'])
-
 
 # Dict for replacement
 replace_dic = {}
@@ -122,7 +122,6 @@ def change_name(name,name_cn,text_id):
     dic[text_id]['name_CN'] = name_cn
     return id_lis[id_idx]
 
-# Save
 def save_json():
     with open(path, 'w', encoding ='utf8') as json_file:
         json.dump(dic,json_file,indent = 1,ensure_ascii = False)
@@ -130,9 +129,6 @@ def save_json():
         with open(name_dict_path,'w') as f:
             for key,value in name_dic.items():
                 f.write(f"{key} {value}\n")
-    return
-
-def upload_json(file_json):
     return
     
 def load_last_position():
@@ -193,18 +189,20 @@ def derive_text(radio_type, text_start_id, text_end_id,text_seperator_long,text_
 
 def main():
     with gr.Blocks() as demo:
-        with gr.Tab('编辑页'):
+        gr.Markdown("# <center>EasyTranslatorv0.2.1-Beta</center>",visible=True)
+        # 文本编辑页
+        with gr.Tab('文本编辑'):
             
             gr.Markdown('## 文本编辑及保存区')
             with gr.Row():
-                text_id = gr.Textbox(label = '文本编号')
+                text_id = gr.Textbox(label = 'Text id')
                 button_load = gr.Button('Load last edited position')
             with gr.Row():
                 with gr.Column():
                     text_name = gr.Textbox(label = 'Name')
                     
                     text_input = gr.Textbox(label = 'Text', lines=10)
-                    
+                    button_save = gr.Button("SAVE FILE",scale= 2)
                 with gr.Column():
                     text_name_cn = gr.Textbox(label = 'Name_CN')
                     with gr.Row():
@@ -218,13 +216,8 @@ def main():
                     with gr.Row():
                         button_up = gr.Button('↑')
                         button_down = gr.Button('↓')
-                        
                         button_replace = gr.Button("Replace")
-                        
-            with gr.Row():
-                button_save = gr.Button("Save JSON")
-            
-            
+         
             gr.Markdown('## 文档导出区')
             radio_type = gr.Radio(choices = ["中文|纯文本", "中文|人名文本", "双语|人名文本"],label = '导出类型')
             with gr.Row():
@@ -236,9 +229,8 @@ def main():
             text_output_path = gr.Textbox(label = '输出文件路径', value = args['output_txt_path'])
             button_derive_text = gr.Button("导出文本")
             
-            
+        # 文件转换页
         with gr.Tab('文件转换'):
-            
             gr.Markdown("## CSV to JSON(支持批量上传)")
             with gr.Row():
                 with gr.Column():
@@ -250,16 +242,14 @@ def main():
                         text_id_column = gr.Textbox(label='id列名(optional)',value = args['csv_column_name']['id'],placeholder = '若不指定或找不到指定列，程序会自动编号')
                     button_convert2json =  gr.Button('Convert')
                 file_result_json = gr.File(file_types=['json'],label="Output JSON",interactive=False)
-            gr.Markdown("## JSON to CSV(未启用)")
+            gr.Markdown("## JSON to CSV(支持批量上传)")
             with gr.Row():
                 with gr.Column():
                     file_target_json = gr.File(file_types=['json'],file_count = 'multiple',label="Input JSON")
                     button_convert2csv =  gr.Button('Convert')
                 file_result_csv = gr.File(file_types=['jcsv'],label="Output CSV",interactive=False)
-            
-            
-                
-                
+        
+        # API设置页
         with gr.Tab('API Settings'):
             gr.Markdown('## 百度 API')
             text_baidu_api_id = gr.Textbox(label='Baidu API Id',value = args['baidu_api_settings']['api_id'])
@@ -295,7 +285,9 @@ def main():
         button_convert2json.click(convert_to_json, 
                             inputs = [file_target_csv, text_text_column, text_name_column, text_id_column], 
                             outputs = file_result_json)
-        
+        button_convert2csv.click(convert_to_csv, 
+                            inputs = file_target_json, 
+                            outputs = file_result_csv)
     
     demo.launch()
 

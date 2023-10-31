@@ -1,5 +1,5 @@
 {
- "last_edited_id": "100001004",
+ "last_edited_id": "100001001",
  "file_path": "./example_text.json",
  "name_dict_path": "./example_name_dict.json",
  "replace_dict_path": "./example_replace_dict.json",
@@ -7,9 +7,9 @@
  "seperator_long": "===============================",
  "seperator_short": "---------------------",
  "csv_column_name": {
-    "id": "",
-    "text": "text",
-    "name": "name"
+  "id": "",
+  "text": "text",
+  "name": "name"
  },
  "baidu_api_settings": {
   "api_id": "YOUR BAIDU API ID",

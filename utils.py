@@ -13,6 +13,7 @@ def load_config(filepath):
     return args
 args = load_config('config.json')
 
+
 # Baidu preparation
 api_id = args['baidu_api_settings']['api_id']
 api_key = args['baidu_api_settings']['api_key']
@@ -35,12 +36,9 @@ def get_baidu_completion(text,api_id=api_id,api_key=api_key):
     result = r.json()
     return result['trans_result'][0]['dst']
 
-
-
 # OPENAI preparation
 openai_api_key = args['openai_api_settings']['openai_api_key']
-if os.getenv("OPENAI_API_KEY"):
-    openai_api_key = os.getenv("OPENAI_API_KEY")
+
 def get_gpt_completion(prompt, model="gpt-3.5-turbo",api_key = openai_api_key):
     openai.api_key  = api_key
     messages = [{"role": "user", "content": prompt}]
@@ -96,5 +94,32 @@ def convert_to_json(files, text_col, name_col, id_col):
             f.close()
         with open(new_path, 'w', encoding= "utf-8") as f2:
             json.dump(dic,f2,indent=1,ensure_ascii=False)
+        out_files.append(new_path)
+    return out_files
+
+def convert_to_csv(files):
+    out_files = []
+    for file_target in files:
+        path = file_target.name
+        dir = osp.dirname(path)
+        base_name = osp.basename(path)
+        new_name = base_name[:-4]+'.csv'
+        new_path = osp.join(dir,new_name)
+        with open(path, 'r', encoding= "utf-8") as f:
+            dic = json.load(f)
+        field_names = [] 
+        for value in dic.values():
+            for field in value.keys():
+                if field not in field_names: field_names.append(field)
+        for key in dic.keys():
+            dic[key]['id'] = key
+            for field in field_names:
+                if field not in dic[key]:
+                    dic[key][field] = ''
+        field_names.insert(0,'id')
+        with open(new_path, 'w', encoding= "utf-8",newline='') as f2:
+            writer = csv.DictWriter(f2,fieldnames=field_names)
+            writer.writeheader()
+            writer.writerows(list(dic.values()))
         out_files.append(new_path)
     return out_files

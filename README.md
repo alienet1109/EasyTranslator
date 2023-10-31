@@ -1,5 +1,5 @@
 # EasyTranslator 0.1.1-beta
-自用为主的汉化辅助工具
+基于gradio的汉化辅助工具
 ## 特性
 1. 一键机翻接口，提供复制到剪贴板按钮。
 2. 便捷的上下句切换，直接跳转功能。 
@@ -7,11 +7,12 @@
 4. 人名翻译记忆功能，一次修改将会同步到全体。
 5. 文本翻译记忆功能，机翻/修改后只要不关闭程序，切换上下句，刷新网页都不会影响译文缓存。相对地原文不会缓存，所以手滑改或删掉只要切换或者刷新即可恢复。
 6. 一键替换功能，用于专有名词错译的情况。会将机翻及手翻文本中的对象全部替换。替换词典可以在运行中直接更改，不用重开程序。
-7. 手滑删或改掉了api key可以刷新，文本框会回到初始状态，再次提交即可。（其实是bug。但好像有好处先留着）
+7. 便利的api key管理及自动存储功能
+8. 提供JSON文件与CSV文件互转
 <br><br>
 
 ## 使用
-至少需要安装python3(作者使用的版本是3.10。3.8和3.9目前测试没有问题)
+至少需要安装python3(作者使用的版本是3.10，其它版本尚未测试)
 ***
 ### Install
 ```
@@ -21,12 +22,20 @@ git clone https://github.com/alienet1109/EasyTranslator.git
 ***
 ### Preparation
 #### 文本准备
-需要使用者自行准备原文本json文件。逻辑是运行途中就会修改json文件所以最好做好备份。
+需要使用者自行准备原文本json文件，或使用本程序将原文本csv文件转换为json文件
+csv文件格式要求为：
+* 至少包含人名列、文本列，按顺序排列的表格 
 
-格式要求为：
+若不指定id列名，程序会自动生成id。 \
+可以指定人名和文本的列名，将会分别以'name'、'text'为键输入json文件；其它列将会以原列名为键输入，以防数据丢失。
+
+json文件格式要求为：
 * 由key为id，value为{'name':'原文人名','text':'原文文本'}的键值对组成，按文本顺序正序排序的字典。
 
-之后预计会追加将csv/txt文件转为json的功能。
+运行途中会频繁修改json文件，所以最好做好备份。\
+可以随时在页面中修改json文件路径，修改前务必保存，修改后请按Load按钮以同步更新否则不知道会有什么bug。\
+上次编辑文本编号将会重置，路径与编号将直接更新至config文件。
+
 #### 安装依赖
 ```
 pip install -r requirements.txt
@@ -60,3 +69,8 @@ python EasyTranslator.py
 ![image](https://github.com/alienet1109/EasyTranslator/blob/master/assets/api%20key%20setting.gif)
 
 ![image](https://github.com/alienet1109/EasyTranslator/blob/master/assets/derive%20text.gif)
+
+## 计划追加功能
+1. 可选主题
+2. 追加翻译接口
+3. 追加文本输出格式

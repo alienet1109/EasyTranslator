@@ -78,8 +78,7 @@ def change_id(text_id):
         name_dic[dic[text_id]['name']] = dic[text_id]['name']
     else:
         dic[text_id]['name_CN'] = name_dic[dic[text_id]['name']]
-    with open(config_path, 'w', encoding ='utf8') as json_file:
-        json.dump(args,json_file,indent = 1,ensure_ascii = False)
+    save_config(args,config_path)
     return dic[text_id]['text'],dic[text_id]['name'],name_dic[dic[text_id]['name']],dic[text_id]['gpt3'],dic[text_id]["baidu"],dic[text_id]["text_CN"]
 
 def last_text():
@@ -131,7 +130,16 @@ def save_json():
                 f.write(f"{key} {value}\n")
     return
     
-def load_last_position():
+def load_last_position(text_path):
+    global id_idx,id_lis,path,dic
+    if text_path != path:
+        path = text_path
+        with open(path, 'r', encoding ='utf8') as json_file:
+            dic = json.load(json_file)
+        id_lis = list(dic.keys())
+        id_idx = 0
+        args["file_path"] = path
+        save_config(args,config_path)
     return id_lis[id_idx]
 
 def submit_api(baidu_api_id, baidu_api_key,openai_api_key):
@@ -142,8 +150,7 @@ def submit_api(baidu_api_id, baidu_api_key,openai_api_key):
         args['baidu_api_settings']['api_key'] = baidu_api_key
     if openai_api_key != '':
         args['openai_api_settings']['openai_api_key'] = openai_api_key
-    with open(config_path, 'w', encoding ='utf8') as json_file:
-        json.dump(args,json_file,indent = 1,ensure_ascii = False)
+    save_config(args,config_path)
     return baidu_api_id, baidu_api_key,openai_api_key
         
 # Derive text
@@ -195,6 +202,7 @@ def main():
             
             gr.Markdown('## 文本编辑及保存区')
             with gr.Row():
+                text_file_path = gr.Textbox(label = 'File Path', value = args["file_path"])
                 text_id = gr.Textbox(label = 'Text id')
                 button_load = gr.Button('Load last edited position')
             with gr.Row():
@@ -259,13 +267,13 @@ def main():
             button_api_submit = gr.Button('Submit')
         
         # 文本框行为
-        text_id.change(change_id, inputs = text_id,
+        text_id.change(change_id, inputs = [text_id],
                     outputs = [text_input,text_name,text_name_cn,text_gpt,text_baidu,text_final])
         text_final.change(change_final,inputs = [text_final,text_id])
         text_name_cn.change(change_name,inputs = [text_name,text_name_cn,text_id])
         
         # 按钮行为
-        button_load.click(load_last_position,outputs = text_id)
+        button_load.click(load_last_position,inputs=text_file_path, outputs = text_id)
         button_up.click(last_text, outputs = text_id)
         button_down.click(next_text, outputs = text_id)
         button_translate_gpt.click(gpt_translate, 

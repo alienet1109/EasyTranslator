@@ -13,6 +13,10 @@ def load_config(filepath):
     return args
 args = load_config('config.json')
 
+def save_config(args,filepath):
+    with open(filepath, 'w', encoding ='utf8') as json_file:
+        json.dump(args,json_file,indent = 1,ensure_ascii = False)
+    return
 
 # Baidu preparation
 api_id = args['baidu_api_settings']['api_id']

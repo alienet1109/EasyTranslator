@@ -187,6 +187,18 @@ def derive_text(radio_type, text_start_id, text_end_id,text_seperator_long,text_
                     f.write(dic[key]['text_CN']+'\n')
                     f.write('\n')
         return        
+    if radio_type == "中文|单次人名文本":
+        with open(output_txt_path,'w',encoding="utf-8") as f:
+            name_lis = []
+            for key in tqdm(lis):
+                if key in dic:
+                    name = dic[key]['name_CN']
+                    if name not in name_lis:
+                        name_lis.append(name)
+                        f.write(f'{name}: {dic[key]["text_CN"]}\n')
+                    else:
+                        f.write(dic[key]['text_CN']+'\n')
+                    f.write('\n')
     if radio_type == '中文|纯文本':
         with open(output_txt_path,'w',encoding="utf-8") as f:
             for key in tqdm(lis):
@@ -203,7 +215,7 @@ def main():
             gr.Markdown('## 文本编辑及保存区')
             with gr.Row():
                 text_file_path = gr.Textbox(label = 'File Path', value = args["file_path"])
-                text_id = gr.Textbox(label = 'Text id')
+                text_id = gr.Textbox(label = 'Text id',show_copy_button=True)
                 button_load = gr.Button('Load last edited position')
             with gr.Row():
                 with gr.Column():
@@ -227,7 +239,7 @@ def main():
                         button_replace = gr.Button("Replace")
          
             gr.Markdown('## 文档导出区')
-            radio_type = gr.Radio(choices = ["中文|纯文本", "中文|人名文本", "双语|人名文本"],label = '导出类型')
+            radio_type = gr.Radio(choices = ["中文|纯文本","中文|单次人名文本", "中文|人名文本", "双语|人名文本",""],label = '导出类型')
             with gr.Row():
                 text_start_id = gr.Textbox(label = '起始句id')
                 text_end_id = gr.Textbox(label = '结束句id')

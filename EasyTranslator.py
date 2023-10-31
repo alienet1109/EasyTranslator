@@ -207,7 +207,7 @@ def derive_text(radio_type, text_start_id, text_end_id,text_seperator_long,text_
                     f.write('\n')
 
 def main():
-    with gr.Blocks() as demo:
+    with gr.Blocks(theme=Theme1()) as demo:
         gr.Markdown("# <center>EasyTranslatorv0.2.2-Beta</center>",visible=True)
         # 文本编辑页
         with gr.Tab('文本编辑'):

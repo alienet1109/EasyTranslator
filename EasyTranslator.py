@@ -343,7 +343,7 @@ with gr.Blocks(theme=Theme1()) as demo:
     text_name_cn.change(change_name,inputs = [text_name,text_name_cn,text_id])
     
     # 按钮行为
-    button_refresh.click(refresh_context,inputs=[text_refresh_id,text_context_length], outputs = [dataframe_context,text_refresh_id])
+    button_refresh.click(refresh_context,inputs=[text_refresh_id,text_context_length], outputs = [dataframe_context,text_id])
     button_load.click(load_last_position,inputs=text_file_path, outputs = text_id)
     button_up.click(last_text, outputs = text_id)
     button_down.click(next_text, outputs = text_id)

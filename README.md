@@ -1,5 +1,9 @@
-# EasyTranslator v1.0.1
+# EasyTranslator v1.0.2
 基于gradio的汉化辅助工具
+
+
+## v1.0.2更新内容
+1. 支持批量机翻
 
 ## v1.0.1更新内容
 1. 优化文件读取逻辑
@@ -67,6 +71,9 @@ python EasyTranslator.py
 <br><br>
 
 ## 演示
+![image](https://github.com/alienet1109/EasyTranslator/blob/master/assets/batch_translate.gif)
+
+![image](https://github.com/alienet1109/EasyTranslator/blob/master/assets/context_preview.gif)
 
 ![image](https://github.com/alienet1109/EasyTranslator/blob/master/assets/id%20search.gif)
 
@@ -79,6 +86,8 @@ python EasyTranslator.py
 ![image](https://github.com/alienet1109/EasyTranslator/blob/master/assets/api%20key%20setting.gif)
 
 ![image](https://github.com/alienet1109/EasyTranslator/blob/master/assets/derive%20text.gif)
+
+![image](https://github.com/alienet1109/EasyTranslator/blob/master/assets/part_translate.gif)
 
 ## 计划追加功能
 1. 可选主题

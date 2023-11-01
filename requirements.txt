@@ -1,3 +1,4 @@
 gradio
 openai
 Requests
+tqdm

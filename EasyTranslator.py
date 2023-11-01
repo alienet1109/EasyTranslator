@@ -3,7 +3,7 @@ import gradio as gr
 from os import path as osp
 import json
 import csv
-
+from tqdm import tqdm
 from utils import *
 from themes import *
 
@@ -49,10 +49,10 @@ def gpt_translate(text,text_id):
     prompt = args["openai_api_settings"]["prompt_prefix"]+text+args["openai_api_settings"]["prompt_postfix"]
     try:
         translation = get_gpt_completion(prompt, api_key = args["openai_api_settings"]["openai_api_key"])
-        dic[text_id]["gpt3"] = translation
+        if dic[text_id]["text"].replace("\n"," ") == text:
+            dic[text_id]["gpt3"] = translation
     except Exception as e:
-        print("Exception:", e)
-        translation = f"Error:{e}"
+        gr.Error(e)
     return translation
 
 def baidu_translate(text,text_id):
@@ -63,12 +63,33 @@ def baidu_translate(text,text_id):
                                            api_key = args["baidu_api_settings"]["api_key"],
                                            from_lang=args["baidu_api_settings"]["from_lang"],
                                            to_lang=args["baidu_api_settings"]["to_lang"],)
-        dic[text_id]["baidu"] = translation
+        if dic[text_id]["text"].replace("\n"," ") == text:
+            dic[text_id]["baidu"] = translation
     except Exception as e:
-        print("Exception:", e)
-        translation = f"Error:{e}"
+        gr.Error(e)
     return translation
 
+def batch_translate(radio, check, text_start_id,text_end_id,progress=gr.Progress()):
+    progress(0, desc="Starting...")
+    if text_start_id not in id_lis or text_end_id not in id_lis or id_lis.index(text_start_id) > id_lis.index(text_end_id):
+        gr.Warning("找不到指定序号, 或id前后顺序错误")
+        return
+    start = id_lis.index(text_start_id)
+    end = id_lis.index(text_end_id) + 1
+    lis = id_lis[start:end]
+    if radio == "Gpt3":
+        for key in progress.tqdm(lis):
+            gpt_translate(dic[key]['text'],key)
+            time.sleep(0.1)
+    if radio == 'Baidu':
+        for key in progress.tqdm(lis):
+            baidu_translate(dic[key]['text'],key)
+            time.sleep(0.1)
+    if check:        
+        save_json(show_info=False)
+    gr.Info(f"批量机翻成功, 共完成{end-start}句翻译")
+    return ""
+    
 # Other actions
 def change_id(text_id):
     global id_idx
@@ -119,8 +140,9 @@ def replace(text_gpt,text_baidu,text_final,text_id):
     return text_gpt,text_baidu,text_final
 
 def change_final(text,text_id):
-    dic[text_id]["text_CN"] = text   
-    altered_text_finals.add(text_id)
+    if text != dic[text_id]["text_CN"]:
+        dic[text_id]["text_CN"] = text
+        altered_text_finals.add(text_id)
     return id_lis[id_idx]
 
 def change_name(name,name_cn,text_id):
@@ -128,15 +150,16 @@ def change_name(name,name_cn,text_id):
     dic[text_id]["name_CN"] = name_cn
     return id_lis[id_idx]
 
-def save_json():
+def save_json(show_info = True):
     global altered_text_finals
     with open(path, "w", encoding ="utf8") as json_file:
         json.dump(dic,json_file,indent = 1,ensure_ascii = False)
     if osp.exists(name_dict_path):
-        with open(name_dict_path,"w") as f:
+        with open(name_dict_path,"w",encoding = "utf-8") as f:
             for key,value in name_dic.items():
                 f.write(f"{key} {value}\n")
-    gr.Info(f"JSON保存成功, 共更新{len(altered_text_finals)}条记录")
+    if show_info:
+        gr.Info(f"JSON保存成功, 共更新{len(altered_text_finals)}句译文")
     altered_text_finals = set()
     
     
@@ -203,52 +226,48 @@ def derive_text(radio_type, text_start_id, text_end_id,text_seperator_long,text_
     if radio_type == "双语|人名文本":
         with open(output_txt_path,"w",encoding="utf-8") as f:
             for key in lis:
-                if key in dic:
-                    # if key[-3:] == "001":
-                    #     f.write("【"+key[-4]+"】\n")
-                    f.write(text_seperator_long+"\n")
-                    f.write(dic[key]["name"]+"\n")
-                    f.write("\n")
-                    f.write(dic[key]["text"]+"\n")
-                    f.write("\n")
-                    f.write(text_seperator_short+"\n")
-                    f.write(dic[key]["name_CN"]+"\n\n")
-                    f.write(dic[key]["text_CN"]+"\n")
-                    f.write("\n")
+                # if key[-3:] == "001":
+                #     f.write("【"+key[-4]+"】\n")
+                f.write(text_seperator_long+"\n")
+                f.write(dic[key]["name"]+"\n")
+                f.write("\n")
+                f.write(dic[key]["text"]+"\n")
+                f.write("\n")
+                f.write(text_seperator_short+"\n")
+                f.write(dic[key]["name_CN"]+"\n\n")
+                f.write(dic[key]["text_CN"]+"\n")
+                f.write("\n")
         return
     if radio_type == "中文|人名文本":
         with open(output_txt_path,"w",encoding="utf-8") as f:
             for key in lis:
-                if key in dic:
-                    # if key[-3:] == "001":
-                    #     f.write("【"+key[-4]+"】\n")
-                    f.write(text_seperator_long+"\n")            
-                    f.write(dic[key]["name_CN"]+"\n\n")
-                    f.write(dic[key]["text_CN"]+"\n")
-                    f.write("\n")
+                # if key[-3:] == "001":
+                #     f.write("【"+key[-4]+"】\n")
+                f.write(text_seperator_long+"\n")            
+                f.write(dic[key]["name_CN"]+"\n\n")
+                f.write(dic[key]["text_CN"]+"\n")
+                f.write("\n")
         return        
     if radio_type == "中文|单次人名文本":
         with open(output_txt_path,"w",encoding="utf-8") as f:
             name_lis = []
             for key in lis:
-                if key in dic:
-                    name = dic[key]["name_CN"]
-                    if name not in name_lis:
-                        name_lis.append(name)
-                        f.write(name + ": "+ dic[key]["text_CN"]+"\n")
-                    else:
-                        f.write(dic[key]["text_CN"]+"\n")
-                    f.write("\n")
+                name = dic[key]["name_CN"]
+                if name not in name_lis:
+                    name_lis.append(name)
+                    f.write(name + ": "+ dic[key]["text_CN"]+"\n")
+                else:
+                    f.write(dic[key]["text_CN"]+"\n")
+                f.write("\n")
     if radio_type == "中文|纯文本":
         with open(output_txt_path,"w",encoding="utf-8") as f:
             for key in lis:
-                if key in dic:
-                    f.write(dic[key]["text_CN"]+"\n")
-                    f.write("\n")
+                f.write(dic[key]["text_CN"]+"\n")
+                f.write("\n")
     gr.Info(f"Txt导出成功, 共导出{len(lis)}条记录")
-
+    
 with gr.Blocks(theme=Theme1()) as demo:
-    gr.Markdown("# <center>EasyTranslatorv1.0.1</center>",visible=True)
+    gr.Markdown("# <center>EasyTranslatorv1.0.2</center>",visible=True)
     # 文本编辑页
     with gr.Tab("文本编辑"):
         
@@ -260,7 +279,6 @@ with gr.Blocks(theme=Theme1()) as demo:
         with gr.Row():
             with gr.Column():
                 text_name = gr.Textbox(label = "Name")
-                
                 text_input = gr.Textbox(label = "Text", lines=10)
                 button_save = gr.Button("SAVE FILE",scale= 2)
             with gr.Column():
@@ -269,33 +287,42 @@ with gr.Blocks(theme=Theme1()) as demo:
                     text_gpt = gr.Textbox(label = "GPT", lines=3,show_copy_button=True,interactive = True)
                     button_translate_gpt = gr.Button("Translate(GPT)")
                 with gr.Row():
-                    text_baidu = gr.Textbox(label = "Baidu", lines=3,show_copy_button=True,interactive = True)
-                    
+                    text_baidu = gr.Textbox(label = "Baidu", lines=3,show_copy_button=True,interactive = True)    
                     button_translate_baidu = gr.Button("Translate(Baidu)")
                 text_final = gr.Textbox(label = "Text_CN", lines=3,show_copy_button=True,interactive = True)
                 with gr.Row():
                     button_up = gr.Button("↑")
                     button_down = gr.Button("↓")
                     button_replace = gr.Button("Replace")
-        gr.Markdown("## 文档导出区")
-        radio_type = gr.Radio(choices = ["中文|纯文本","中文|单次人名文本", "中文|人名文本", "双语|人名文本"],label = "导出类型")
+        gr.Markdown("## 批量机翻区")
         with gr.Row():
-            text_start_id = gr.Textbox(label = "起始句id")
-            text_end_id = gr.Textbox(label = "结束句id")
+            text_translate_start_id = gr.Textbox(label = "起始句id")
+            text_translate_end_id = gr.Textbox(label = "结束句id")
         with gr.Row():
-            text_seperator_long = gr.Textbox(label = "句间分隔符(长)", value = args["seperator_long"])
-            text_seperator_short = gr.Textbox(label = "双语间分隔符(短)", value = args["seperator_short"])
-        text_output_path = gr.Textbox(label = "输出文件路径", value = args["output_txt_path"])
-        button_derive_text = gr.Button("导出文本") 
+            radio_translator = gr.Radio(choices = ["Baidu","Gpt3"],label = "接口")
+            label_progress = gr.Label("")
+        checkbox_if_save = gr.Checkbox(value= False, label = "翻译完成后直接保存JSON")
+        button_batch_translate = gr.Button("批量翻译")   
+            
     
-    tab_context = gr.Tab("文本预览")
+    tab_context = gr.Tab("文本预览及导出")
     with tab_context:
-        gr.Markdown("## 上下文预览")
+        gr.Markdown("## 上下文预览区")
         with gr.Row():
             text_refresh_id = gr.Textbox(label = "编号", value = args["last_edited_id"])
             text_context_length = gr.Textbox(label = "上下文长度", value = args["context_half_length"])
             button_refresh = gr.Button("Refresh")
-        dataframe_context = gr.DataFrame(headers=['id','name','name_CN','text','text_CN'],interactive=True)   
+        dataframe_context = gr.DataFrame(headers=['id','name','name_CN','text','text_CN'],interactive=True) 
+        gr.Markdown("## 文档导出区")
+        radio_type = gr.Radio(choices = ["中文|纯文本","中文|单次人名文本", "中文|人名文本", "双语|人名文本"],label = "导出类型")
+        with gr.Row():
+            text_derive_start_id = gr.Textbox(label = "起始句id")
+            text_derive_end_id = gr.Textbox(label = "结束句id")
+        with gr.Row():
+            text_seperator_long = gr.Textbox(label = "句间分隔符(长)", value = args["seperator_long"])
+            text_seperator_short = gr.Textbox(label = "双语间分隔符(短)", value = args["seperator_short"])
+        text_output_path = gr.Textbox(label = "输出文件路径", value = args["output_txt_path"])
+        button_derive_text = gr.Button("导出文本")   
         
     # 文件转换页
     with gr.Tab("文件转换"):
@@ -343,6 +370,8 @@ with gr.Blocks(theme=Theme1()) as demo:
     text_name_cn.change(change_name,inputs = [text_name,text_name_cn,text_id])
     
     # 按钮行为
+    button_batch_translate.click(batch_translate, inputs = [radio_translator,checkbox_if_save,text_translate_start_id,text_translate_end_id],
+                                 outputs = [label_progress])
     button_refresh.click(refresh_context,inputs=[text_refresh_id,text_context_length], outputs = [dataframe_context,text_id])
     button_load.click(load_last_position,inputs=text_file_path, outputs = text_id)
     button_up.click(last_text, outputs = text_id)
@@ -359,7 +388,7 @@ with gr.Blocks(theme=Theme1()) as demo:
                                       text_openai_api,text_prefix,text_postfix])
     button_save.click(save_json)
     button_derive_text.click(derive_text,
-                            inputs = [radio_type, text_start_id, text_end_id,
+                            inputs = [radio_type, text_derive_start_id, text_derive_end_id,
                                     text_seperator_long,text_seperator_short,text_output_path])
     button_convert2json.click(convert_to_json, 
                         inputs = [file_target_csv, text_text_column, text_name_column, text_id_column], 

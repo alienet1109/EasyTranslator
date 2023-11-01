@@ -8,7 +8,7 @@ from utils import *
 from themes import *
 
 # Initialization
-config_path = smart_path("./config.json")
+config_path = osp.join(osp.dirname(osp.abspath(__file__)),"./config.json")
 args = load_config(config_path)
 path = args["file_path"]
 abs_path = smart_path(path)
@@ -295,7 +295,7 @@ with gr.Blocks(theme=Theme1()) as demo:
             text_refresh_id = gr.Textbox(label = "编号", value = args["last_edited_id"])
             text_context_length = gr.Textbox(label = "上下文长度", value = args["context_half_length"])
             button_refresh = gr.Button("Refresh")
-        dataframe_context = gr.DataFrame(headers=['id','name','name_CN','text','text_CN'])   
+        dataframe_context = gr.DataFrame(headers=['id','name','name_CN','text','text_CN'],interactive=True)   
         
     # 文件转换页
     with gr.Tab("文件转换"):

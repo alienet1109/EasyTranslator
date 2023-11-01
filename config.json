@@ -1,6 +1,6 @@
 {
- "last_edited_id": "1067005102",
- "file_path": "E:\\code\\python\\mgd\\mgd\\gk_episode_text.json",
+ "last_edited_id": "100001001",
+ "file_path": "./example_text.json",
  "context_half_length": "10",
  "name_dict_path": "./example_name_dict.json",
  "replace_dict_path": "./example_replace_dict.json",

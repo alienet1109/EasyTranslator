@@ -1,5 +1,4 @@
 import openai
-import os
 import requests
 import random
 import json
@@ -11,18 +10,22 @@ def load_config(filepath):
     with open(filepath, 'r', encoding='utf-8') as file:
         args = json.load(file)
     return args
-args = load_config('config.json')
 
 def save_config(args,filepath):
     with open(filepath, 'w', encoding ='utf8') as json_file:
         json.dump(args,json_file,indent = 1,ensure_ascii = False)
     return
 
+def smart_path(path):
+    file_dir = osp.dirname(osp.abspath(__file__))
+    if osp.exists(path):
+        return path
+    else:
+        return osp.join(file_dir,path)
+args = load_config(smart_path('./config.json'))
+
 # Baidu preparation
-api_id = args['baidu_api_settings']['api_id']
-api_key = args['baidu_api_settings']['api_key']
-from_lang = args['baidu_api_settings']['from_lang']
-to_lang =  args['baidu_api_settings']['to_lang']
+
 
 endpoint = 'http://api.fanyi.baidu.com'
 path = '/api/trans/vip/translate'
@@ -32,7 +35,7 @@ headers = {'Content-Type': 'application/x-www-form-urlencoded'}
 def make_md5(s, encoding='utf-8'):
     return md5(s.encode(encoding)).hexdigest()
 
-def get_baidu_completion(text,api_id=api_id,api_key=api_key):
+def get_baidu_completion(text,api_id,api_key,from_lang,to_lang):
     salt = random.randint(32768, 65536)
     sign = make_md5(api_id + text + str(salt) + api_key)
     payload = {'appid': api_id, 'q': text, 'from': from_lang, 'to': to_lang, 'salt': salt, 'sign': sign}

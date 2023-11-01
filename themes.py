@@ -2,6 +2,7 @@ from __future__ import annotations
 from typing import Iterable
 import gradio as gr
 from gradio.themes.base import Base
+from gradio.themes.default import Default
 from gradio.themes.utils import colors, fonts, sizes
 import time
 
@@ -43,8 +44,11 @@ class Theme1(Base):
             
         )
         super().set(
+            input_background_fill="*neutral_100",
             block_title_text_weight="600",
+            button_shadow_active="*neutral_400 0px 0px 2px 2px",
             block_border_width="3px",
             button_large_padding="32px",
+            button_secondary_background_fill_hover="*neutral_300",
         )
 

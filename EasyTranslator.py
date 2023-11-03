@@ -152,7 +152,7 @@ def change_name(name,name_cn,text_id):
 
 def save_json(show_info = True):
     global altered_text_finals
-    with open(path, "w", encoding ="utf8") as json_file:
+    with open(abs_path, "w", encoding ="utf8") as json_file:
         json.dump(dic,json_file,indent = 1,ensure_ascii = False)
     if osp.exists(name_dict_path):
         with open(name_dict_path,"w",encoding = "utf-8") as f:
@@ -161,7 +161,6 @@ def save_json(show_info = True):
     if show_info:
         gr.Info(f"JSON保存成功, 共更新{len(altered_text_finals)}句译文")
     altered_text_finals = set()
-    
     
 def load_last_position(text_path):
     global id_idx,id_lis,path,dic
@@ -208,6 +207,8 @@ def refresh_context(refresh_id,length):
             dic[i]['text_CN'] = ""
         row = [i, dic[i]['name'],dic[i]['name_CN'], dic[i]['text'],dic[i]['text_CN']]
         if i == id_lis[idx]: row[0] = f"**{i}**"
+        if i in altered_text_finals:
+            row[4] = f"*{row[4]}*"
         data.append(row)
     return data,id_lis[id_idx]
 
@@ -312,7 +313,8 @@ with gr.Blocks(theme=Theme1()) as demo:
             text_refresh_id = gr.Textbox(label = "编号", value = args["last_edited_id"])
             text_context_length = gr.Textbox(label = "上下文长度", value = args["context_half_length"])
             button_refresh = gr.Button("Refresh")
-        dataframe_context = gr.DataFrame(headers=['id','name','name_CN','text','text_CN'],interactive=True) 
+        dataframe_context = gr.DataFrame(headers=['id','name','name_CN','text','text_CN'],
+                                         interactive=True, max_cols=5) 
         gr.Markdown("## 文档导出区")
         radio_type = gr.Radio(choices = ["中文|纯文本","中文|单次人名文本", "中文|人名文本", "双语|人名文本"],label = "导出类型")
         with gr.Row():

@@ -18,15 +18,13 @@ def save_config(args,filepath):
 
 def smart_path(path):
     file_dir = osp.dirname(osp.abspath(__file__))
-    if osp.exists(path):
+    if osp.isabs(path):
         return path
     else:
         return osp.join(file_dir,path)
 args = load_config(smart_path('./config.json'))
 
 # Baidu preparation
-
-
 endpoint = 'http://api.fanyi.baidu.com'
 path = '/api/trans/vip/translate'
 url = endpoint + path

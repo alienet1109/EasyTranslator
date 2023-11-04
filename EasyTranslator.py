@@ -2,7 +2,6 @@ import openai
 import gradio as gr
 from os import path as osp
 import json
-import csv
 from tqdm import tqdm
 from utils import *
 from themes import *
@@ -10,11 +9,13 @@ from themes import *
 # Initialization
 config_path = osp.join(osp.dirname(osp.abspath(__file__)),"./config.json")
 args = load_config(config_path)
+if_save_id_immediately = True if int(args["if_save_id_immediately"]) else False
 path = args["file_path"]
 abs_path = smart_path(path)
 replace_dict_path = smart_path(args["replace_dict_path"])
 name_dict_path = smart_path(args["name_dict_path"])
 altered_text_finals= set()
+
 
 if osp.exists(abs_path):
     with open(abs_path, "r", encoding ="utf8") as json_file:
@@ -88,12 +89,11 @@ def batch_translate(radio, check, text_start_id,text_end_id,progress=gr.Progress
     if check:        
         save_json(show_info=False)
     gr.Info(f"批量机翻成功, 共完成{end-start}句翻译")
-    return ""
+    return f"已完成{end-start}句翻译"
     
 # Other actions
 def change_id(text_id):
     global id_idx
-    args["last_edited_id"] = text_id
     id_idx = id_lis.index(text_id)
     if "gpt3" not in dic[text_id]:
         dic[text_id]["gpt3"] = ""
@@ -104,7 +104,10 @@ def change_id(text_id):
     if dic[text_id]["name"] not in name_dic:
         name_dic[dic[text_id]["name"]] = dic[text_id]["name"]
     dic[text_id]["name_CN"] = name_dic[dic[text_id]["name"]]
-    save_config(args,config_path)
+    replace(dic[text_id]["gpt3"],dic[text_id]["baidu"],dic[text_id]["text_CN"],text_id,False)
+    if if_save_id_immediately:
+        args["last_edited_id"] = text_id
+        save_config(args,config_path)
     return args["file_path"],dic[text_id]["text"],dic[text_id]["name"],name_dic[dic[text_id]["name"]],\
         dic[text_id]["gpt3"],dic[text_id]["baidu"],dic[text_id]["text_CN"]
 
@@ -120,16 +123,17 @@ def next_text():
         id_idx += 1
     return id_lis[id_idx]
 
-def replace(text_gpt,text_baidu,text_final,text_id):
+def replace(text_gpt,text_baidu,text_final,text_id, check_file = True):
     if not text_id:
         text_id = id_lis[id_idx]
-    if osp.exists(replace_dict_path):
-        with open(replace_dict_path, "r", encoding="utf-8") as f:
-            for line in f:
-                item = line.split(" ")
-                item[1] = item[1].replace("\n","")
-                replace_dic[item[0]]=item[1]
-            f.close()
+    if check_file:
+        if osp.exists(replace_dict_path):
+            with open(replace_dict_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    item = line.split(" ")
+                    item[1] = item[1].replace("\n","")
+                    replace_dic[item[0]]=item[1]
+                f.close()
     for key,value in replace_dic.items():
         text_gpt = text_gpt.replace(key, value)
         text_baidu = text_baidu.replace(key, value)
@@ -161,12 +165,17 @@ def save_json(show_info = True):
     if show_info:
         gr.Info(f"JSON保存成功, 共更新{len(altered_text_finals)}句译文")
     altered_text_finals = set()
-    
+
+def save_last_position(text_id):
+    args["last_edited_id"] = text_id
+    save_config(args,config_path)
+    return
+
 def load_last_position(text_path):
     global id_idx,id_lis,path,dic
     if not osp.exists(smart_path(text_path)):
         raise gr.Error("文件不存在")
-    if text_path != path:
+    if path != text_path:
         path = text_path
         with open(smart_path(text_path), "r", encoding ="utf8") as json_file:
             dic = json.load(json_file)
@@ -208,9 +217,22 @@ def refresh_context(refresh_id,length):
         row = [i, dic[i]['name'],dic[i]['name_CN'], dic[i]['text'],dic[i]['text_CN']]
         if i == id_lis[idx]: row[0] = f"**{i}**"
         if i in altered_text_finals:
-            row[4] = f"*{row[4]}*"
+            row[4] = f"*{row[4]}"
         data.append(row)
     return data,id_lis[id_idx]
+
+def save_context(data, refresh_id, if_save = False):
+    for i in range(len(data)):
+        text_id = data['id'][i]
+        text_cn = data['text_CN'][i]
+        if text_id == f"**{refresh_id}**":
+            text_id = refresh_id
+        if text_id in altered_text_finals and text_cn and text_cn[0] == "*":
+            text_cn = text_cn[1:]
+        dic[text_id]['text_CN'] = text_cn
+    if if_save:
+        save_json()
+    return
 
 # Derive text
 def derive_text(radio_type, text_start_id, text_end_id,text_seperator_long,text_seperator_short, output_txt_path):
@@ -268,15 +290,16 @@ def derive_text(radio_type, text_start_id, text_end_id,text_seperator_long,text_
     gr.Info(f"Txt导出成功, 共导出{len(lis)}条记录")
     
 with gr.Blocks(theme=Theme1()) as demo:
-    gr.Markdown("# <center>EasyTranslatorv1.0.2</center>",visible=True)
+    gr.Markdown("# <center>EasyTranslatorv1.0.3</center>",visible=True)
     # 文本编辑页
     with gr.Tab("文本编辑"):
-        
         gr.Markdown("## 文本编辑及保存区")
         with gr.Row():
             text_file_path = gr.Textbox(label = "File Path", value = args["file_path"])
             text_id = gr.Textbox(label = "Text id",show_copy_button=True)
-            button_load = gr.Button("Load last edited position")
+            button_load_pos = gr.Button("LOAD last edited position")
+            if not if_save_id_immediately:
+                button_save_pos = gr.Button("SAVE last edited position")
         with gr.Row():
             with gr.Column():
                 text_name = gr.Textbox(label = "Name")
@@ -301,8 +324,8 @@ with gr.Blocks(theme=Theme1()) as demo:
             text_translate_end_id = gr.Textbox(label = "结束句id")
         with gr.Row():
             radio_translator = gr.Radio(choices = ["Baidu","Gpt3"],label = "接口")
-            label_progress = gr.Label("")
-        checkbox_if_save = gr.Checkbox(value= False, label = "翻译完成后直接保存JSON")
+            label_progress = gr.Label(label = "进度条",value="")
+        checkbox_if_save_translation = gr.Checkbox(value= False, label = "翻译完成后直接保存JSON")
         button_batch_translate = gr.Button("批量翻译")   
             
     
@@ -312,7 +335,11 @@ with gr.Blocks(theme=Theme1()) as demo:
         with gr.Row():
             text_refresh_id = gr.Textbox(label = "编号", value = args["last_edited_id"])
             text_context_length = gr.Textbox(label = "上下文长度", value = args["context_half_length"])
-            button_refresh = gr.Button("Refresh")
+            with gr.Column():
+                with gr.Row():
+                    button_refresh = gr.Button("Refresh")
+                    button_save_context = gr.Button("Save Changes")
+                checkbox_if_save_context = gr.Checkbox(value= False, label = "修改直接保存JSON")
         dataframe_context = gr.DataFrame(headers=['id','name','name_CN','text','text_CN'],
                                          interactive=True, max_cols=5) 
         gr.Markdown("## 文档导出区")
@@ -372,10 +399,10 @@ with gr.Blocks(theme=Theme1()) as demo:
     text_name_cn.change(change_name,inputs = [text_name,text_name_cn,text_id])
     
     # 按钮行为
-    button_batch_translate.click(batch_translate, inputs = [radio_translator,checkbox_if_save,text_translate_start_id,text_translate_end_id],
-                                 outputs = [label_progress])
-    button_refresh.click(refresh_context,inputs=[text_refresh_id,text_context_length], outputs = [dataframe_context,text_id])
-    button_load.click(load_last_position,inputs=text_file_path, outputs = text_id)
+    # -文本编辑页
+    button_load_pos.click(load_last_position,inputs=text_file_path, outputs = text_id)
+    if not if_save_id_immediately:
+        button_save_pos.click(save_last_position, inputs = [text_id])
     button_up.click(last_text, outputs = text_id)
     button_down.click(next_text, outputs = text_id)
     button_translate_gpt.click(gpt_translate, 
@@ -385,19 +412,30 @@ with gr.Blocks(theme=Theme1()) as demo:
     button_replace.click(replace, 
                         inputs = [text_gpt,text_baidu,text_final,text_id], 
                         outputs=[text_gpt,text_baidu,text_final])
-    button_api_submit.click(submit_api, 
-                            inputs = [text_baidu_api_id,text_baidu_api_key,text_from_lang,text_to_lang,
-                                      text_openai_api,text_prefix,text_postfix])
     button_save.click(save_json)
+    
+    button_batch_translate.click(batch_translate, inputs = [radio_translator,checkbox_if_save_translation,text_translate_start_id,text_translate_end_id],
+                                 outputs = [label_progress])
+    
+    # -预览及导出页
+    button_refresh.click(refresh_context,inputs=[text_refresh_id,text_context_length], outputs = [dataframe_context,text_id])
+    button_save_context.click(save_context, inputs=[dataframe_context, text_refresh_id, checkbox_if_save_context])
     button_derive_text.click(derive_text,
                             inputs = [radio_type, text_derive_start_id, text_derive_end_id,
                                     text_seperator_long,text_seperator_short,text_output_path])
+    
+    # -文件转换页
     button_convert2json.click(convert_to_json, 
                         inputs = [file_target_csv, text_text_column, text_name_column, text_id_column], 
                         outputs = file_result_json)
     button_convert2csv.click(convert_to_csv, 
                         inputs = file_target_json, 
                         outputs = file_result_csv)
+    
+    # -API管理页
+    button_api_submit.click(submit_api, 
+                            inputs = [text_baidu_api_id,text_baidu_api_key,text_from_lang,text_to_lang,
+                                      text_openai_api,text_prefix,text_postfix])
 
 demo.queue()
 

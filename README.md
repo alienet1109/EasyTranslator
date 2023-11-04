@@ -2,7 +2,7 @@
 基于gradio的汉化辅助工具
 
 ## v1.0.3更新内容
-1. 支持预览页直接修改译文，若之前有修改，建议保存JSON后再使用此功能。
+1. 支持预览页直接修改译文，建议保存JSON后再使用此功能。
 2. 可选是否即时更新上次编辑id
 
     `config.json`中设置`"if_save_id_immediately"`参数，若为1则逻辑与之前一样，在切换id时立刻保存进`config.json`；若为0则会显示保存编辑id按钮`SAVE last edited position`，在点击后存入`config.json`。

@@ -85,25 +85,6 @@ def batch_translate(radio, check, text_start_id,text_end_id,progress=gr.Progress
     return f"已完成{end-start}句翻译"
     
 # Other actions
-def change_id(text_id):
-    global id_idx
-    id_idx = id_lis.index(text_id)
-    if "gpt3" not in dic[text_id]:
-        dic[text_id]["gpt3"] = ""
-    if "baidu" not in dic[text_id]:
-        dic[text_id]["baidu"] = ""
-    if "text_CN" not in dic[text_id]:
-        dic[text_id]["text_CN"] = ""
-    if dic[text_id]["name"] not in name_dic:
-        name_dic[dic[text_id]["name"]] = dic[text_id]["name"]
-    dic[text_id]["name_CN"] = name_dic[dic[text_id]["name"]]
-    replace(dic[text_id]["gpt3"],dic[text_id]["baidu"],dic[text_id]["text_CN"],text_id,False)
-    if if_save_id_immediately:
-        args["last_edited_id"] = text_id
-        save_config(args,config_path)
-    return args["file_path"],dic[text_id]["text"],dic[text_id]["name"],name_dic[dic[text_id]["name"]],\
-        dic[text_id]["gpt3"],dic[text_id]["baidu"],dic[text_id]["text_CN"]
-
 def last_text():
     global id_idx
     if id_idx > 0:
@@ -136,6 +117,25 @@ def replace(text_gpt,text_baidu,text_final,text_id, check_file = True):
     dic[text_id]["text_CN"] = text_final
     return text_gpt,text_baidu,text_final
 
+def change_id(text_id):
+    global id_idx
+    id_idx = id_lis.index(text_id)
+    if "gpt3" not in dic[text_id]:
+        dic[text_id]["gpt3"] = ""
+    if "baidu" not in dic[text_id]:
+        dic[text_id]["baidu"] = ""
+    if "text_CN" not in dic[text_id]:
+        dic[text_id]["text_CN"] = ""
+    if dic[text_id]["name"] not in name_dic:
+        name_dic[dic[text_id]["name"]] = dic[text_id]["name"]
+    dic[text_id]["name_CN"] = name_dic[dic[text_id]["name"]]
+    replace(dic[text_id]["gpt3"],dic[text_id]["baidu"],dic[text_id]["text_CN"],text_id,False)
+    if if_save_id_immediately:
+        args["last_edited_id"] = text_id
+        save_config(args,config_path)
+    return args["file_path"],dic[text_id]["text"],dic[text_id]["name"],name_dic[dic[text_id]["name"]],\
+        dic[text_id]["gpt3"],dic[text_id]["baidu"],dic[text_id]["text_CN"]
+        
 def change_final(text,text_id):
     if text != dic[text_id]["text_CN"]:
         dic[text_id]["text_CN"] = text
@@ -176,7 +176,7 @@ def load_last_position(text_path):
         id_idx = 0
         args["file_path"] = path
         save_config(args,config_path)
-    return id_lis[id_idx]
+    return args["last_edited_id"]
 
 def submit_api(baidu_api_id, baidu_api_key, from_lang, to_lang, openai_api_key,prefix,postfix):
     global args
@@ -366,7 +366,7 @@ with gr.Blocks(theme=Theme1()) as demo:
                     button_save_context = gr.Button("Save Changes")
                 checkbox_if_save_context = gr.Checkbox(value= False, label = "修改直接保存JSON")
         dataframe_context = gr.DataFrame(headers=['id','name','name_CN','text','text_CN'],
-                                         interactive=True, max_cols=5) 
+                                         interactive=True) 
         gr.Markdown("## 文档导出区")
         radio_type = gr.Radio(choices = ["中文|纯文本","中文|单次人名文本", "中文|人名文本", "双语|人名文本"],label = "导出类型")
         with gr.Row():

@@ -1,4 +1,5 @@
 {
+ "moyu_mode": "0",
  "if_save_id_immediately": "0",
  "last_edited_id": "100001001",
  "file_path": "./example_text.json",
@@ -22,6 +23,7 @@
  "openai_api_settings": {
   "openai_api_key": "YOUR OPENAI API KEY",
   "prompt_prefix": "翻译为中文:",
-  "prompt_postfix": ""
+  "prompt_postfix": "",
+  "time_limit":"15"
  }
 }

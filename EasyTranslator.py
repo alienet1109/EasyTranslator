@@ -1,8 +1,6 @@
-import openai
 import gradio as gr
 from os import path as osp
 import json
-from tqdm import tqdm
 from utils import *
 from themes import *
 
@@ -10,6 +8,7 @@ from themes import *
 config_path = osp.join(osp.dirname(osp.abspath(__file__)),"./config.json")
 args = load_config(config_path)
 if_save_id_immediately = True if int(args["if_save_id_immediately"]) else False
+moyu_mode = True if int(args["moyu_mode"]) else False
 path = args["file_path"]
 abs_path = smart_path(path)
 replace_dict_path = smart_path(args["replace_dict_path"])
@@ -48,26 +47,20 @@ if osp.exists(name_dict_path):
 def gpt_translate(text,text_id):
     text = text.replace("\n"," ")
     prompt = args["openai_api_settings"]["prompt_prefix"]+text+args["openai_api_settings"]["prompt_postfix"]
-    try:
-        translation = get_gpt_completion(prompt, api_key = args["openai_api_settings"]["openai_api_key"])
-        if dic[text_id]["text"].replace("\n"," ") == text:
-            dic[text_id]["gpt3"] = translation
-    except Exception as e:
-        gr.Error(e)
+    translation, if_succ = get_gpt_completion(prompt, api_key = args["openai_api_settings"]["openai_api_key"])
+    if dic[text_id]["text"].replace("\n"," ") == text and if_succ:
+        dic[text_id]["gpt3"] = translation
     return translation
 
 def baidu_translate(text,text_id):
     text = text.replace("\n"," ")
-    try:
-        translation = get_baidu_completion(text,
-                                           api_id = args["baidu_api_settings"]["api_id"],
-                                           api_key = args["baidu_api_settings"]["api_key"],
-                                           from_lang=args["baidu_api_settings"]["from_lang"],
-                                           to_lang=args["baidu_api_settings"]["to_lang"],)
-        if dic[text_id]["text"].replace("\n"," ") == text:
-            dic[text_id]["baidu"] = translation
-    except Exception as e:
-        gr.Error(e)
+    translation = get_baidu_completion(text,
+                                        api_id = args["baidu_api_settings"]["api_id"],
+                                        api_key = args["baidu_api_settings"]["api_key"],
+                                        from_lang=args["baidu_api_settings"]["from_lang"],
+                                        to_lang=args["baidu_api_settings"]["to_lang"],)
+    if dic[text_id]["text"].replace("\n"," ") == text:
+        dic[text_id]["baidu"] = translation
     return translation
 
 def batch_translate(radio, check, text_start_id,text_end_id,progress=gr.Progress()):
@@ -202,12 +195,16 @@ def submit_api(baidu_api_id, baidu_api_key, from_lang, to_lang, openai_api_key,p
     save_config(args,config_path)
     return 
 
-def refresh_context(refresh_id,length):
+def refresh_context(refresh_id,length,context_type):
     length = int(length)
     idx = id_lis.index(refresh_id)
-    ids = id_lis[max(idx-length, 0):idx+length]
+    if context_type == "上下文":
+        ids = id_lis[max(idx-length, 0):idx+length+1]
+    elif context_type == "上文":
+        ids = id_lis[max(idx-length, 0):idx+1]
+    elif context_type == "下文":
+        ids = id_lis[idx:idx+length+1]
     data = []
-    
     for i in ids:
         if dic[i]["name"] not in name_dic:
             name_dic[dic[i]["name"]] = dic[i]["name"]
@@ -223,13 +220,18 @@ def refresh_context(refresh_id,length):
 
 def save_context(data, refresh_id, if_save = False):
     for i in range(len(data)):
+        altered = 0
         text_id = data['id'][i]
         text_cn = data['text_CN'][i]
         if text_id == f"**{refresh_id}**":
             text_id = refresh_id
         if text_id in altered_text_finals and text_cn and text_cn[0] == "*":
             text_cn = text_cn[1:]
-        dic[text_id]['text_CN'] = text_cn
+        if dic[text_id]['text_CN'] != text_cn:
+            altered += 1
+            altered_text_finals.add(text_id)
+            dic[text_id]['text_CN'] = text_cn
+    gr.Info(f"已更新{altered}条译文")
     if if_save:
         save_json()
     return
@@ -290,7 +292,7 @@ def derive_text(radio_type, text_start_id, text_end_id,text_seperator_long,text_
     gr.Info(f"Txt导出成功, 共导出{len(lis)}条记录")
     
 with gr.Blocks(theme=Theme1()) as demo:
-    gr.Markdown("# <center>EasyTranslatorv1.0.3</center>",visible=True)
+    gr.Markdown("# <center>EasyTranslatorv1.0.4</center>",visible=True)
     # 文本编辑页
     with gr.Tab("文本编辑"):
         gr.Markdown("## 文本编辑及保存区")
@@ -301,23 +303,44 @@ with gr.Blocks(theme=Theme1()) as demo:
             if not if_save_id_immediately:
                 button_save_pos = gr.Button("SAVE last edited position")
         with gr.Row():
-            with gr.Column():
-                text_name = gr.Textbox(label = "Name")
-                text_input = gr.Textbox(label = "Text", lines=10)
-                button_save = gr.Button("SAVE FILE",scale= 2)
-            with gr.Column():
-                text_name_cn = gr.Textbox(label = "Name_CN")
-                with gr.Row():
-                    text_gpt = gr.Textbox(label = "GPT", lines=3,show_copy_button=True,interactive = True)
-                    button_translate_gpt = gr.Button("Translate(GPT)")
-                with gr.Row():
-                    text_baidu = gr.Textbox(label = "Baidu", lines=3,show_copy_button=True,interactive = True)    
-                    button_translate_baidu = gr.Button("Translate(Baidu)")
-                text_final = gr.Textbox(label = "Text_CN", lines=3,show_copy_button=True,interactive = True)
-                with gr.Row():
-                    button_up = gr.Button("↑")
-                    button_down = gr.Button("↓")
-                    button_replace = gr.Button("Replace")
+            if not moyu_mode:
+                # 全屏mode
+                with gr.Column():
+                    text_name = gr.Textbox(label = "Name")
+                    text_text = gr.Textbox(label = "Text", lines=10,show_copy_button=True)
+                    button_save = gr.Button("SAVE FILE",scale= 2)
+                with gr.Column():
+                    text_name_cn = gr.Textbox(label = "Name_CN")
+                    with gr.Row():
+                        text_gpt = gr.Textbox(label = "GPT", lines=3,show_copy_button=True,interactive = True)
+                        button_translate_gpt = gr.Button("Translate(GPT)")
+                    with gr.Row():
+                        text_baidu = gr.Textbox(label = "Baidu", lines=3,show_copy_button=True,interactive = True)    
+                        button_translate_baidu = gr.Button("Translate(Baidu)")
+                    text_final = gr.Textbox(label = "Text_CN", lines=3,show_copy_button=True,interactive = True)
+                    with gr.Row():
+                        button_up = gr.Button("↑")
+                        button_down = gr.Button("↓")
+                        button_replace = gr.Button("Replace")
+            else:
+                # 摸鱼mode
+                with gr.Column():
+                    button_save = gr.Button("SAVE FILE",scale= 2)
+                    text_name = gr.Textbox(label = "Name")
+                    text_name_cn = gr.Textbox(label = "Name_CN")
+                with gr.Column():
+                    with gr.Row():
+                        text_gpt = gr.Textbox(label = "GPT", lines=3,show_copy_button=True,interactive = True)
+                        button_translate_gpt = gr.Button("Translate(GPT)")
+                    with gr.Row():
+                        text_baidu = gr.Textbox(label = "Baidu", lines=3,show_copy_button=True,interactive = True)    
+                        button_translate_baidu = gr.Button("Translate(Baidu)")
+                    text_text = gr.Textbox(label = "Text", lines=3,show_copy_button=True)
+                    text_final = gr.Textbox(label = "Text_CN", lines=3,show_copy_button=True,interactive = True)
+                    with gr.Row():
+                        button_up = gr.Button("↑")
+                        button_down = gr.Button("↓")
+                        button_replace = gr.Button("Replace")
         gr.Markdown("## 批量机翻区")
         with gr.Row():
             text_translate_start_id = gr.Textbox(label = "起始句id")
@@ -328,13 +351,15 @@ with gr.Blocks(theme=Theme1()) as demo:
         checkbox_if_save_translation = gr.Checkbox(value= False, label = "翻译完成后直接保存JSON")
         button_batch_translate = gr.Button("批量翻译")   
             
-    
     tab_context = gr.Tab("文本预览及导出")
     with tab_context:
         gr.Markdown("## 上下文预览区")
         with gr.Row():
-            text_refresh_id = gr.Textbox(label = "编号", value = args["last_edited_id"])
-            text_context_length = gr.Textbox(label = "上下文长度", value = args["context_half_length"])
+            with gr.Column():
+                with gr.Row():
+                    text_refresh_id = gr.Textbox(label = "编号", value = args["last_edited_id"])
+                    text_context_length = gr.Textbox(label = "上下文长度", value = args["context_half_length"])
+                radio_context_type = gr.Radio(choices = ["上下文","上文", "下文"], label = "预览模式",value="上下文")
             with gr.Column():
                 with gr.Row():
                     button_refresh = gr.Button("Refresh")
@@ -390,11 +415,11 @@ with gr.Blocks(theme=Theme1()) as demo:
     
     
     # 标签页行为
-    tab_context.select(refresh_context, inputs=[text_id,text_context_length],outputs=[dataframe_context,text_refresh_id])
+    tab_context.select(refresh_context, inputs=[text_id,text_context_length,radio_context_type],outputs=[dataframe_context,text_refresh_id])
     
     # 文本框行为
     text_id.change(change_id, inputs = [text_id],
-                outputs = [text_file_path,text_input,text_name,text_name_cn,text_gpt,text_baidu,text_final])
+                outputs = [text_file_path,text_text,text_name,text_name_cn,text_gpt,text_baidu,text_final])
     text_final.change(change_final,inputs = [text_final,text_id])
     text_name_cn.change(change_name,inputs = [text_name,text_name_cn,text_id])
     
@@ -406,9 +431,9 @@ with gr.Blocks(theme=Theme1()) as demo:
     button_up.click(last_text, outputs = text_id)
     button_down.click(next_text, outputs = text_id)
     button_translate_gpt.click(gpt_translate, 
-                            inputs=[text_input,text_id], outputs=text_gpt)
+                            inputs=[text_text,text_id], outputs=text_gpt)
     button_translate_baidu.click(baidu_translate, 
-                                inputs=[text_input,text_id], outputs=text_baidu)
+                                inputs=[text_text,text_id], outputs=text_baidu)
     button_replace.click(replace, 
                         inputs = [text_gpt,text_baidu,text_final,text_id], 
                         outputs=[text_gpt,text_baidu,text_final])
@@ -418,7 +443,7 @@ with gr.Blocks(theme=Theme1()) as demo:
                                  outputs = [label_progress])
     
     # -预览及导出页
-    button_refresh.click(refresh_context,inputs=[text_refresh_id,text_context_length], outputs = [dataframe_context,text_id])
+    button_refresh.click(refresh_context,inputs=[text_refresh_id,text_context_length,radio_context_type], outputs = [dataframe_context,text_id])
     button_save_context.click(save_context, inputs=[dataframe_context, text_refresh_id, checkbox_if_save_context])
     button_derive_text.click(derive_text,
                             inputs = [radio_type, text_derive_start_id, text_derive_end_id,

@@ -24,6 +24,6 @@
   "openai_api_key": "YOUR OPENAI API KEY",
   "prompt_prefix": "翻译为中文:",
   "prompt_postfix": "",
-  "time_limit":"15"
+  "time_limit": "15"
  }
 }

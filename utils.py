@@ -51,6 +51,7 @@ class GPTThread(threading.Thread):
         self.model = model
         self.messages = messages
         self.temperature = temperature
+        self.result = ""
     def terminate(self):
         self._running = False 
     def run(self):

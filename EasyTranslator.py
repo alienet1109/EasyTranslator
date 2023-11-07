@@ -219,8 +219,8 @@ def refresh_context(refresh_id,length,context_type):
     return data,id_lis[id_idx]
 
 def save_context(data, refresh_id, if_save = False):
+    altered = 0
     for i in range(len(data)):
-        altered = 0
         text_id = data['id'][i]
         text_cn = data['text_CN'][i]
         if text_id == f"**{refresh_id}**":
@@ -359,7 +359,7 @@ with gr.Blocks(theme=Theme1()) as demo:
                 with gr.Row():
                     text_refresh_id = gr.Textbox(label = "编号", value = args["last_edited_id"])
                     text_context_length = gr.Textbox(label = "上下文长度", value = args["context_half_length"])
-                radio_context_type = gr.Radio(choices = ["上下文","上文", "下文"], label = "预览模式",value="上下文")
+                radio_context_type = gr.Radio(choices = ["上下文","上文", "下文"], label = "预览模式",value="下文")
             with gr.Column():
                 with gr.Row():
                     button_refresh = gr.Button("Refresh")

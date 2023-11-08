@@ -20,9 +20,12 @@ if osp.exists(abs_path):
     with open(abs_path, "r", encoding ="utf8") as json_file:
         dic = json.load(json_file)
     id_lis = list(dic.keys())
+    idx_dic = dict()
+    for idx,id_ in enumerate(id_lis):
+        idx_dic[id_] = idx 
     id_idx = 0
     if args["last_edited_id"] in id_lis:
-        id_idx = id_lis.index(args["last_edited_id"])
+        id_idx = idx_dic[args["last_edited_id"]]
 
 # Dict for replacement
 replace_dic = {}
@@ -65,11 +68,11 @@ def baidu_translate(text,text_id):
 
 def batch_translate(radio, check, text_start_id,text_end_id,progress=gr.Progress()):
     progress(0, desc="Starting...")
-    if text_start_id not in id_lis or text_end_id not in id_lis or id_lis.index(text_start_id) > id_lis.index(text_end_id):
+    if text_start_id not in id_lis or text_end_id not in id_lis or idx_dic[text_start_id] > idx_dic[text_end_id]:
         gr.Warning("找不到指定序号, 或id前后顺序错误")
         return
-    start = id_lis.index(text_start_id)
-    end = id_lis.index(text_end_id) + 1
+    start = idx_dic[text_start_id]
+    end = idx_dic[text_end_id] + 1
     lis = id_lis[start:end]
     if radio == "Gpt3":
         for key in progress.tqdm(lis):
@@ -119,7 +122,7 @@ def replace(text_gpt,text_baidu,text_final,text_id, check_file = True):
 
 def change_id(text_id):
     global id_idx
-    id_idx = id_lis.index(text_id)
+    id_idx = idx_dic[text_id]
     if "gpt3" not in dic[text_id]:
         dic[text_id]["gpt3"] = ""
     if "baidu" not in dic[text_id]:
@@ -140,12 +143,12 @@ def change_final(text,text_id):
     if text != dic[text_id]["text_CN"]:
         dic[text_id]["text_CN"] = text
         altered_text_finals.add(text_id)
-    return id_lis[id_idx]
+    return 
 
 def change_name(name,name_cn,text_id):
     name_dic[name] = name_cn
     dic[text_id]["name_CN"] = name_cn
-    return id_lis[id_idx]
+    return 
 
 def save_json(show_info = True):
     global altered_text_finals
@@ -165,7 +168,7 @@ def save_last_position(text_id):
     return
 
 def load_last_position(text_path):
-    global id_idx,id_lis,path,dic
+    global id_idx,id_lis,idx_dic,path,dic
     if not osp.exists(smart_path(text_path)):
         raise gr.Error("文件不存在")
     if path != text_path:
@@ -173,6 +176,9 @@ def load_last_position(text_path):
         with open(smart_path(text_path), "r", encoding ="utf8") as json_file:
             dic = json.load(json_file)
         id_lis = list(dic.keys())
+        idx_dic = dict()
+        for idx,id_ in enumerate(id_lis):
+            idx_dic[id_] = idx 
         id_idx = 0
         args["file_path"] = path
         save_config(args,config_path)
@@ -197,7 +203,7 @@ def submit_api(baidu_api_id, baidu_api_key, from_lang, to_lang, openai_api_key,p
 
 def refresh_context(refresh_id,length,context_type):
     length = int(length)
-    idx = id_lis.index(refresh_id)
+    idx = idx_dic[refresh_id]
     if context_type == "上下文":
         ids = id_lis[max(idx-length, 0):idx+length+1]
     elif context_type == "上文":
@@ -223,15 +229,14 @@ def save_context(data, refresh_id, if_save = False):
     for i in range(len(data)):
         text_id = data['id'][i]
         text_cn = data['text_CN'][i]
-        if text_id == f"**{refresh_id}**":
-            text_id = refresh_id
+        text_id = text_id.replace("*","")
         if text_id in altered_text_finals and text_cn and text_cn[0] == "*":
             text_cn = text_cn[1:]
         if dic[text_id]['text_CN'] != text_cn:
             altered += 1
             altered_text_finals.add(text_id)
             dic[text_id]['text_CN'] = text_cn
-    gr.Info(f"已更新{altered}条译文")
+    gr.Info(f"已修改{altered}条译文")
     if if_save:
         save_json()
     return
@@ -242,11 +247,11 @@ def derive_text(radio_type, text_start_id, text_end_id,text_seperator_long,text_
     if output_txt_path[-4:] != ".txt":
         gr.Warning("输出路径错误")
         return
-    if text_start_id not in id_lis or text_end_id not in id_lis or id_lis.index(text_start_id) > id_lis.index(text_end_id):
+    if text_start_id not in id_lis or text_end_id not in id_lis or idx_dic[text_start_id] > idx_dic[text_end_id]:
         gr.Warning("找不到指定序号, 或id前后顺序错误")
         return
-    start = id_lis.index(text_start_id)
-    end = id_lis.index(text_end_id) + 1
+    start = idx_dic[text_start_id]
+    end = idx_dic[text_end_id] + 1
     lis = id_lis[start:end]
     if radio_type == "双语|人名文本":
         with open(output_txt_path,"w",encoding="utf-8") as f:
@@ -290,7 +295,16 @@ def derive_text(radio_type, text_start_id, text_end_id,text_seperator_long,text_
                 f.write(dic[key]["text_CN"]+"\n")
                 f.write("\n")
     gr.Info(f"Txt导出成功, 共导出{len(lis)}条记录")
-    
+
+def get_remaining_text_num():
+    if args["target_id"] in id_lis:
+        target_idx= idx_dic[args["target_id"]]
+        rem = target_idx - id_idx
+        label = f"目标剩余{rem}条"
+    else:
+        label = "目标剩余???条"
+    return label
+
 with gr.Blocks(theme=Theme1()) as demo:
     gr.Markdown("# <center>EasyTranslatorv1.0.4</center>",visible=True)
     # 文本编辑页
@@ -341,6 +355,7 @@ with gr.Blocks(theme=Theme1()) as demo:
                         button_up = gr.Button("↑")
                         button_down = gr.Button("↓")
                         button_replace = gr.Button("Replace")
+        label_remaining_text = gr.Label(label="进度",value = "目标剩余???条")
         gr.Markdown("## 批量机翻区")
         with gr.Row():
             text_translate_start_id = gr.Textbox(label = "起始句id")
@@ -420,6 +435,7 @@ with gr.Blocks(theme=Theme1()) as demo:
     # 文本框行为
     text_id.change(change_id, inputs = [text_id],
                 outputs = [text_file_path,text_text,text_name,text_name_cn,text_gpt,text_baidu,text_final])
+    text_id.change(get_remaining_text_num,inputs = None, outputs= [label_remaining_text])
     text_final.change(change_final,inputs = [text_final,text_id])
     text_name_cn.change(change_name,inputs = [text_name,text_name_cn,text_id])
     
@@ -443,6 +459,7 @@ with gr.Blocks(theme=Theme1()) as demo:
                                  outputs = [label_progress])
     
     # -预览及导出页
+    # button_refresh.click(save_context, inputs=[dataframe_context, text_refresh_id, checkbox_if_save_context])
     button_refresh.click(refresh_context,inputs=[text_refresh_id,text_context_length,radio_context_type], outputs = [dataframe_context,text_id])
     button_save_context.click(save_context, inputs=[dataframe_context, text_refresh_id, checkbox_if_save_context])
     button_derive_text.click(derive_text,

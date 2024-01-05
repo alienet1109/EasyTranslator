@@ -32,6 +32,7 @@ replace_dic = {}
 if osp.exists(replace_dict_path):
     with open(replace_dict_path, "r", encoding="utf-8") as f:
         for line in f:
+            if not line:continue
             item = line.split(" ")
             item[1] = item[1].replace("\n","")
             replace_dic[item[0]]=item[1]
@@ -42,6 +43,7 @@ name_dic = {}
 if osp.exists(name_dict_path):
     with open(name_dict_path, "r", encoding="utf-8") as f:
             for line in f:
+                if not line:continue
                 item = line.split(" ")
                 item[1] = item[1].replace("\n","")
                 name_dic[item[0]]=item[1]
@@ -305,7 +307,35 @@ def get_remaining_text_num():
         label = "目标剩余???条"
     return label
 
-with gr.Blocks(theme=Theme1()) as demo:
+shortcut_js = """
+<script>
+function shortcuts(e) {
+
+    if (e.key.toLowerCase() == "s" && e.shiftKey) {
+        document.getElementById("button_save").click();
+    }
+    if (e.key.toLowerCase() == "w" && e.shiftKey) {
+        document.getElementById("button_up").click();
+    }
+    if (e.key.toLowerCase() == "x" && e.shiftKey) {
+        document.getElementById("button_down").click();
+    }
+    if (e.key.toLowerCase() == "r" && e.shiftKey) {
+        document.getElementById("button_replace").click();
+    }
+    if (e.key.toLowerCase() == "g" && e.shiftKey) {
+        document.getElementById("button_translate_gpt").click();
+    }
+    if (e.key.toLowerCase() == "b" && e.shiftKey) {
+        document.getElementById("button_translate_baidu").click();
+    }
+    
+}
+document.addEventListener('keyup', shortcuts, false);
+</script>
+"""
+
+with gr.Blocks(theme=Theme1(),head=shortcut_js) as demo:
     gr.Markdown("# <center>EasyTranslatorv1.0.4</center>",visible=True)
     # 文本编辑页
     with gr.Tab("文本编辑"):
@@ -322,20 +352,20 @@ with gr.Blocks(theme=Theme1()) as demo:
                 with gr.Column():
                     text_name = gr.Textbox(label = "Name")
                     text_text = gr.Textbox(label = "Text", lines=10,show_copy_button=True)
-                    button_save = gr.Button("SAVE FILE",scale= 2)
+                    button_save = gr.Button("SAVE FILE",scale= 2,elem_id = "button_save")
                 with gr.Column():
                     text_name_cn = gr.Textbox(label = "Name_CN")
                     with gr.Row():
                         text_gpt = gr.Textbox(label = "GPT", lines=3,show_copy_button=True,interactive = True)
-                        button_translate_gpt = gr.Button("Translate(GPT)")
+                        button_translate_gpt = gr.Button("Translate(GPT)",elem_id = "button_translate_gpt")
                     with gr.Row():
                         text_baidu = gr.Textbox(label = "Baidu", lines=3,show_copy_button=True,interactive = True)    
-                        button_translate_baidu = gr.Button("Translate(Baidu)")
+                        button_translate_baidu = gr.Button("Translate(Baidu)",elem_id = "button_translate_baidu")
                     text_final = gr.Textbox(label = "Text_CN", lines=3,show_copy_button=True,interactive = True)
                     with gr.Row():
-                        button_up = gr.Button("↑")
-                        button_down = gr.Button("↓")
-                        button_replace = gr.Button("Replace")
+                        button_up = gr.Button("↑",elem_id = "button_up")
+                        button_down = gr.Button("↓",elem_id = "button_down")
+                        button_replace = gr.Button("Replace",elem_id = "button_replace")
             else:
                 # 摸鱼mode
                 with gr.Column():

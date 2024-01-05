@@ -1,5 +1,13 @@
-# EasyTranslator v1.0.4
+# EasyTranslator v1.0.5
 基于gradio的汉化辅助工具
+## v1.0.5更新内容
+1. 支持键盘快捷键
+shift+w: ↑
+shift+x: ↓
+shift+s: save json
+shift+r: replace
+shift+g: gpt translate
+shift+b: baidu translate
 
 ## v1.0.4更新内容
 1. 追加摸鱼模式, 将必要组件集中在半个屏幕内。在`config.json`中`moyu_mode`设为1开启, 设为0关闭

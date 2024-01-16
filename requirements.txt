@@ -1,2 +1,2 @@
 gradio==4.13.0
-openai==0.28.1
+openai>=1.0

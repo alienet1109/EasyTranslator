@@ -45,6 +45,7 @@ def get_baidu_completion(text,api_id,api_key,from_lang,to_lang):
 # OPENAI preparation
 openai_api_key = args["openai_api_settings"]["openai_api_key"]
 time_limit = float(args["openai_api_settings"]["time_limit"])
+client = openai.OpenAI()
 class GPTThread(threading.Thread):
     def __init__(self, model, messages, temperature):
         super().__init__()
@@ -55,20 +56,20 @@ class GPTThread(threading.Thread):
     def terminate(self):
         self._running = False 
     def run(self):
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
         model=self.model,
         messages=self.messages,
         temperature=self.temperature, 
     )
-        self.result = response.choices[0].message["content"]
-
+        self.result = response.choices[0].message.content
+    
 def get_gpt_completion(prompt, model="gpt-3.5-turbo",api_key = openai_api_key):
     openai.api_key  = api_key
     messages = [{"role": "user", "content": prompt}]
     temperature = random.uniform(0,1)
     thread = GPTThread(model, messages,temperature)
     thread.start()
-    thread.join(time_limit)
+    thread.join(10)
     if thread.is_alive():
         thread.terminate()
         print("请求超时")

@@ -336,7 +336,7 @@ document.addEventListener('keyup', shortcuts, false);
 """
 
 with gr.Blocks(theme=Theme1(),head=shortcut_js) as demo:
-    gr.Markdown("# <center>EasyTranslatorv1.0.5</center>",visible=True)
+    gr.Markdown("# <center>EasyTranslator v1.0.5</center> ",visible=True)
     # 文本编辑页
     with gr.Tab("文本编辑"):
         gr.Markdown("## 文本编辑及保存区")

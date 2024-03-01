@@ -5,6 +5,8 @@ from utils import *
 from themes import *
 
 # Initialization
+# id指代台词的编号，为一个字符串
+# idx指代顺序排列的序号，0,1,2,...
 config_path = osp.join(osp.dirname(osp.abspath(__file__)),"./config.json")
 args = load_config(config_path)
 if_save_id_immediately = True if int(args["if_save_id_immediately"]) else False
@@ -123,6 +125,7 @@ def replace(text_gpt,text_baidu,text_final,text_id, check_file = True):
     return text_gpt,text_baidu,text_final
 
 def change_id(text_id):
+    if not text_id or text_id not in idx_dic: return args["file_path"],"","","","","",""
     global id_idx
     id_idx = idx_dic[text_id]
     if "gpt3" not in dic[text_id]:
@@ -142,12 +145,14 @@ def change_id(text_id):
         dic[text_id]["gpt3"],dic[text_id]["baidu"],dic[text_id]["text_CN"]
         
 def change_final(text,text_id):
+    if not text_id or not text_id in idx_dic: return
     if text != dic[text_id]["text_CN"]:
         dic[text_id]["text_CN"] = text
         altered_text_finals.add(text_id)
     return 
 
 def change_name(name,name_cn,text_id):
+    if not text_id or not text_id in idx_dic: return
     name_dic[name] = name_cn
     dic[text_id]["name_CN"] = name_cn
     return 
@@ -204,6 +209,7 @@ def submit_api(baidu_api_id, baidu_api_key, from_lang, to_lang, openai_api_key,p
     return 
 
 def refresh_context(refresh_id,length,context_type):
+    if not refresh_id or not refresh_id in idx_dic: return [],id_lis[id_idx]
     length = int(length)
     idx = idx_dic[refresh_id]
     if context_type == "上下文":

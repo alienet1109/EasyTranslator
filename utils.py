@@ -150,3 +150,4 @@ def convert_to_csv(files):
             writer.writerows(list(dic.values()))
         out_files.append(new_path)
     return out_files
+

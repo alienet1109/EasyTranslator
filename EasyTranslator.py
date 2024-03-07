@@ -191,7 +191,7 @@ def load_last_position(text_path):
         save_config(args,config_path)
     return args["last_edited_id"]
 
-def submit_api(baidu_api_id, baidu_api_key, from_lang, to_lang, openai_api_key,prefix,postfix):
+def submit_api(baidu_api_id, baidu_api_key, from_lang, to_lang, openai_api_key,prefix,postfix,target_id):
     global args
     if baidu_api_id != "":
         args["baidu_api_settings"]["api_id"] = baidu_api_id
@@ -205,6 +205,7 @@ def submit_api(baidu_api_id, baidu_api_key, from_lang, to_lang, openai_api_key,p
         args["openai_api_settings"]["openai_api_key"] = openai_api_key
     args["openai_api_settings"]["prompt_prefix"] = prefix
     args["openai_api_settings"]["prompt_postfix"] = postfix
+    args["target_id"] = target_id
     save_config(args,config_path)
     return 
 
@@ -313,6 +314,56 @@ def get_remaining_text_num():
         label = "目标剩余???条"
     return label
 
+def merge_json(merged_path,file_merging_json,text_start_id,text_end_id,type):
+    merged_path = smart_path(merged_path)
+    if not osp.exists(merged_path):
+        gr.Warning("路径不存在")
+        return
+    with open(merged_path, "r", encoding ="utf8") as json_file:
+        dic_merge = json.load(json_file)
+    id_lis_merge = list(dic_merge.keys())
+    idx_dic_merge = dict()
+    for idx,id_ in enumerate(id_lis_merge):
+        idx_dic_merge[id_] = idx 
+    if text_start_id not in id_lis_merge or text_end_id not in id_lis_merge or idx_dic_merge[text_start_id] > idx_dic_merge[text_end_id]:
+        gr.Warning("找不到指定序号, 或id前后顺序错误")
+        return
+    path = file_merging_json.name
+    with open(path, "r", encoding ="utf8") as json_file:
+        dic_new = json.load(json_file)
+    for idx in range(idx_dic_merge[text_start_id],idx_dic_merge[text_end_id] + 1):
+        if type == "仅人工翻译":
+            dic_merge[id_lis_merge[idx]]['text_CN'] = dic_new[id_lis_merge[idx]]['text_CN']
+        else:
+            dic_merge[id_lis_merge[idx]] = dic_new[id_lis_merge[idx]]
+    with open(merged_path, "w", encoding ="utf8") as json_file:
+        json.dump(dic_merge,json_file,indent = 1,ensure_ascii = False)
+    gr.Info(f"合并成功，共更新{idx_dic_merge[text_end_id] - idx_dic_merge[text_start_id] + 1}条译文")
+    return
+        
+def output_json(merged_path,text_start_id,text_end_id):
+    merged_path = smart_path(merged_path)
+    if not osp.exists(merged_path):
+        gr.Warning("路径不存在")
+        return
+    with open(merged_path, "r", encoding ="utf8") as json_file:
+        dic_merge = json.load(json_file)
+    id_lis_merge = list(dic_merge.keys())
+    idx_dic_merge = dict()
+    for idx,id_ in enumerate(id_lis_merge):
+        idx_dic_merge[id_] = idx 
+    if text_start_id not in id_lis_merge or text_end_id not in id_lis_merge or idx_dic_merge[text_start_id] > idx_dic_merge[text_end_id]:
+        gr.Warning("找不到指定序号, 或id前后顺序错误")
+        return
+    dic_new = {}
+    for idx in range(idx_dic_merge[text_start_id],idx_dic_merge[text_end_id] + 1):
+        dic_new[id_lis_merge[idx]] = dic_merge[id_lis_merge[idx]]
+    name = "small_" + osp.basename(path)
+    new_path = osp.join(osp.dirname(merged_path), name)
+    with open(new_path, "w", encoding ="utf8") as json_file:
+        json.dump(dic_new,json_file,indent = 1,ensure_ascii = False)
+    return new_path
+  
 shortcut_js = """
 <script>
 function shortcuts(e) {
@@ -342,7 +393,7 @@ document.addEventListener('keyup', shortcuts, false);
 """
 
 with gr.Blocks(theme=Theme1(),head=shortcut_js) as demo:
-    gr.Markdown("# <center>EasyTranslator v1.0.5</center> ",visible=True)
+    gr.Markdown("# <center>EasyTranslator v1.0.6</center> ",visible=True)
     # 文本编辑页
     with gr.Tab("文本编辑"):
         gr.Markdown("## 文本编辑及保存区")
@@ -432,6 +483,8 @@ with gr.Blocks(theme=Theme1(),head=shortcut_js) as demo:
     # 文件转换页
     with gr.Tab("文件转换"):
         gr.Markdown("## CSV to JSON(支持批量上传)")
+        gr.Markdown("准备好台词csv文件（至少包含正序排列的台词）并将台词列命名为text，如自带角色名则将此列命名为name，如自带id则将此列命名为id。\
+            在此处上传csv文件，保存生成的json文件，之后在主界面输入json文件路径即可使用。")
         with gr.Row():
             with gr.Column():
                 
@@ -448,7 +501,34 @@ with gr.Blocks(theme=Theme1(),head=shortcut_js) as demo:
                 file_target_json = gr.File(file_types=["json"],file_count = "multiple",label="Input JSON")
                 button_convert2csv =  gr.Button("Convert")
             file_result_csv = gr.File(file_types=["jcsv"],label="Output CSV",interactive=False)
-    
+    # 文件合并页
+    with gr.Tab("文件合并"):
+        gr.Markdown("## 合并JSON文件")
+        gr.Markdown("将两个json文件中的译文合并，方便多人协作。使用方法为上传部分翻译后的json文件，指定起止id。\
+            程序会用【上传文件】中，从起始句id到结束句id的全部内容，覆盖【指定地址】中的json文件从起始句id到结束句id的全部内容。\
+                若起止id顺序颠倒或不存在，按钮不会作用。请仔细检查并做好备份！！")
+        with gr.Column():
+  
+            text_merged_path = gr.Textbox(label = "File Path", value = args["file_path"])
+            file_merging_json = gr.File(file_types=["json"],file_count = "single", label="File to be merged")
+            with gr.Row():
+                text_merge_start_id = gr.Textbox(label="起始句id",value = "")
+                text_merge_end_id  = gr.Textbox(label="结束句id",value = "")
+                radio_merge_type = gr.Radio(choices = ["仅人工翻译","全部替换"], label = "合并模式",value="仅人工翻译")
+                
+                button_merge =  gr.Button("Merge")
+            
+            # button_output_json =  gr.Button("Merge")
+        gr.Markdown("## 导出JSON文件")
+        gr.Markdown("支持导出起止id范围的小型json文件，以减少协作时的传输负担。使用上面File Path的指定地址。")
+        with gr.Row():
+            text_output_start_id = gr.Textbox(label="起始句id",value = "")
+            text_output_end_id  = gr.Textbox(label="结束句id",value = "")
+            button_output =  gr.Button("Output")
+        file_output_json = gr.File(file_types=["json"],label="Output JSON",interactive=False)
+        
+        
+
     # API设置页
     with gr.Tab("API Settings"):
         gr.Markdown("## 百度 API")
@@ -462,6 +542,8 @@ with gr.Blocks(theme=Theme1(),head=shortcut_js) as demo:
         with gr.Row():
             text_prefix = gr.Textbox(label="Prompt Prefix",value = args["openai_api_settings"]["prompt_prefix"])
             text_postfix = gr.Textbox(label="Prompt Postfix",value = args["openai_api_settings"]["prompt_postfix"])
+        gr.Markdown("## 目标id")
+        text_target_id = gr.Textbox(label="Target Id",value = args["target_id"])
         button_api_submit = gr.Button("Submit")
     
     
@@ -510,10 +592,14 @@ with gr.Blocks(theme=Theme1(),head=shortcut_js) as demo:
                         inputs = file_target_json, 
                         outputs = file_result_csv)
     
+    # -文件合并页
+    button_merge.click(merge_json, inputs=[text_merged_path,file_merging_json,text_merge_start_id,text_merge_end_id,radio_merge_type])
+    button_output.click(output_json, inputs=[text_merged_path,text_output_start_id,text_output_end_id],outputs=file_output_json)
+    
     # -API管理页
     button_api_submit.click(submit_api, 
                             inputs = [text_baidu_api_id,text_baidu_api_key,text_from_lang,text_to_lang,
-                                      text_openai_api,text_prefix,text_postfix])
+                                      text_openai_api,text_prefix,text_postfix,text_target_id])
 
 demo.queue()
 

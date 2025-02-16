@@ -1,4 +1,5 @@
 import gradio as gr
+import os
 from os import path as osp
 import json
 from utils import *
@@ -9,6 +10,12 @@ from themes import *
 # idx指代顺序排列的序号，0,1,2,...
 config_path = osp.join(osp.dirname(osp.abspath(__file__)),"./config.json")
 args = load_config(config_path)
+
+model_list = list(MODEL_NAME_DICT.keys()) + ["gpt3","baidu"]
+for key, value in args["API_KEYS"].items():
+    if "API_KEY" in key and "YOUR" not in value:
+        os.environ[key] = value
+
 if_save_id_immediately = True if int(args["if_save_id_immediately"]) else False
 moyu_mode = True if int(args["moyu_mode"]) else False
 path = args["file_path"]
@@ -16,7 +23,7 @@ abs_path = smart_path(path)
 replace_dict_path = smart_path(args["replace_dict_path"])
 name_dict_path = smart_path(args["name_dict_path"])
 altered_text_finals= set()
-
+time_limit = int(args["time_limit"]) if "time_limit" in args and isinstance(args["time_limit"],int) else 10
 
 if osp.exists(abs_path):
     with open(abs_path, "r", encoding ="utf8") as json_file:
@@ -51,10 +58,25 @@ if osp.exists(name_dict_path):
                 name_dic[item[0]]=item[1]
 
 # Translate 
+def llm_translate(text, text_id, model_name):
+    if model_name not in model_list:
+        return ""
+    if model_name == "baidu":
+        return baidu_translate(text,text_id)
+    elif model_name == "gpt3":
+        return gpt_translate(text,text_id)
+    text = text.replace("\n"," ")
+    prompt = args["openai_api_settings"]["prompt_prefix"]+text+args["openai_api_settings"]["prompt_postfix"]
+    translation, if_succ = get_llm_completion(prompt, time_limit=int(time_limit), model_name=model_name)
+    if dic[text_id]["text"].replace("\n"," ") == text and if_succ:
+        dic[text_id][model_name] = translation  
+    save_config(args,config_path)  
+    return translation
+
 def gpt_translate(text,text_id):
     text = text.replace("\n"," ")
     prompt = args["openai_api_settings"]["prompt_prefix"]+text+args["openai_api_settings"]["prompt_postfix"]
-    translation, if_succ = get_gpt_completion(prompt, api_key = args["openai_api_settings"]["openai_api_key"])
+    translation, if_succ = get_gpt_completion(prompt, time_limit=int(time_limit))
     if dic[text_id]["text"].replace("\n"," ") == text and if_succ:
         dic[text_id]["gpt3"] = translation
     return translation
@@ -70,7 +92,7 @@ def baidu_translate(text,text_id):
         dic[text_id]["baidu"] = translation
     return translation
 
-def batch_translate(radio, check, text_start_id,text_end_id,progress=gr.Progress()):
+def batch_translate(dropdown_batch_model, check, text_start_id,text_end_id,progress=gr.Progress()):
     progress(0, desc="Starting...")
     if text_start_id not in id_lis or text_end_id not in id_lis or idx_dic[text_start_id] > idx_dic[text_end_id]:
         gr.Warning("找不到指定序号, 或id前后顺序错误")
@@ -78,14 +100,9 @@ def batch_translate(radio, check, text_start_id,text_end_id,progress=gr.Progress
     start = idx_dic[text_start_id]
     end = idx_dic[text_end_id] + 1
     lis = id_lis[start:end]
-    if radio == "Gpt3":
-        for key in progress.tqdm(lis):
-            gpt_translate(dic[key]['text'],key)
-            time.sleep(0.1)
-    if radio == 'Baidu':
-        for key in progress.tqdm(lis):
-            baidu_translate(dic[key]['text'],key)
-            time.sleep(0.1)
+    for key in progress.tqdm(lis):
+        llm_translate(dic[key]['text'],key,dropdown_batch_model)
+        time.sleep(0.05)
     if check:        
         save_json(show_info=False)
     gr.Info(f"批量机翻成功, 共完成{end-start}句翻译")
@@ -104,7 +121,7 @@ def next_text():
         id_idx += 1
     return id_lis[id_idx]
 
-def replace(text_gpt,text_baidu,text_final,text_id, check_file = True):
+def replace(dropbox_model1,dropbox_model2,text_model1,text_model2,text_final,text_id, check_file = True):
     if not text_id:
         text_id = id_lis[id_idx]
     if check_file:
@@ -116,33 +133,53 @@ def replace(text_gpt,text_baidu,text_final,text_id, check_file = True):
                     replace_dic[item[0]]=item[1]
                 f.close()
     for key,value in replace_dic.items():
-        text_gpt = text_gpt.replace(key, value)
-        text_baidu = text_baidu.replace(key, value)
+        text_model1 = text_model1.replace(key, value)
+        text_model2 = text_model2.replace(key, value)
         text_final = text_final.replace(key, value)
-    dic[text_id]["gpt3"] = text_gpt
-    dic[text_id]["baidu"] = text_baidu
+    dic[text_id][dropbox_model1] = text_model1
+    dic[text_id][dropbox_model2] = text_model2
     dic[text_id]["text_CN"] = text_final
-    return text_gpt,text_baidu,text_final
+    return text_model1,text_model2,text_final
 
-def change_id(text_id):
+def change_model_name0(text_id, model_name):
+    # 改变机翻文本框
+    if not text_id or not text_id in idx_dic: return ""
+    if model_name not in model_list: return ""
+    args["selected_model"][0] = model_name
+    if model_name in dic[text_id]:
+        return dic[text_id][model_name]
+    else:
+        return ""
+def change_model_name1(text_id, model_name):
+    # 改变机翻文本框
+    if not text_id or not text_id in idx_dic: return ""
+    if model_name not in model_list: return ""
+    args["selected_model"][1] = model_name
+    if model_name in dic[text_id]:
+        return dic[text_id][model_name]
+    else:
+        return ""
+
+def change_id(text_id, dropbox_model1, dropbox_model2):
     if not text_id or text_id not in idx_dic: return args["file_path"],"","","","","",""
     global id_idx
     id_idx = idx_dic[text_id]
-    if "gpt3" not in dic[text_id]:
-        dic[text_id]["gpt3"] = ""
-    if "baidu" not in dic[text_id]:
-        dic[text_id]["baidu"] = ""
+    if dropbox_model1 not in dic[text_id]:
+        dic[text_id][dropbox_model1] = ""
+    if dropbox_model2 not in dic[text_id]:
+        dic[text_id][dropbox_model2] = ""
     if "text_CN" not in dic[text_id]:
         dic[text_id]["text_CN"] = ""
     if dic[text_id]["name"] not in name_dic:
         name_dic[dic[text_id]["name"]] = dic[text_id]["name"]
     dic[text_id]["name_CN"] = name_dic[dic[text_id]["name"]]
-    replace(dic[text_id]["gpt3"],dic[text_id]["baidu"],dic[text_id]["text_CN"],text_id,False)
+    replace(dropbox_model1, dropbox_model2, dic[text_id][dropbox_model1],dic[text_id][dropbox_model2],dic[text_id]["text_CN"],text_id,False)
+    args["selected_model"] = [dropbox_model1, dropbox_model2]
     if if_save_id_immediately:
         args["last_edited_id"] = text_id
         save_config(args,config_path)
     return args["file_path"],dic[text_id]["text"],dic[text_id]["name"],name_dic[dic[text_id]["name"]],\
-        dic[text_id]["gpt3"],dic[text_id]["baidu"],dic[text_id]["text_CN"]
+        dic[text_id][dropbox_model1],dic[text_id][dropbox_model2],dic[text_id]["text_CN"]
         
 def change_final(text,text_id):
     if not text_id or not text_id in idx_dic: return
@@ -157,6 +194,9 @@ def change_name(name,name_cn,text_id):
     dic[text_id]["name_CN"] = name_cn
     return 
 
+def change_apikey(dropdown_apikey):
+    return args["API_KEYS"][dropdown_apikey] if dropdown_apikey in args["API_KEYS"] else ""
+    
 def save_json(show_info = True):
     global altered_text_finals
     with open(abs_path, "w", encoding ="utf8") as json_file:
@@ -191,7 +231,7 @@ def load_last_position(text_path):
         save_config(args,config_path)
     return args["last_edited_id"]
 
-def submit_api(baidu_api_id, baidu_api_key, from_lang, to_lang, openai_api_key,prefix,postfix,target_id):
+def submit_api(baidu_api_id, baidu_api_key, from_lang, to_lang, dropdown_apikey,text_apikey,prefix,postfix,target_id):
     global args
     if baidu_api_id != "":
         args["baidu_api_settings"]["api_id"] = baidu_api_id
@@ -201,8 +241,8 @@ def submit_api(baidu_api_id, baidu_api_key, from_lang, to_lang, openai_api_key,p
         args["baidu_api_settings"]["from_lang"] = from_lang
     if to_lang != "":
         args["baidu_api_settings"]["to_lang"] = to_lang
-    if openai_api_key != "":
-        args["openai_api_settings"]["openai_api_key"] = openai_api_key
+    if text_apikey != "":
+        args["API_KEYS"][dropdown_apikey] = text_apikey
     args["openai_api_settings"]["prompt_prefix"] = prefix
     args["openai_api_settings"]["prompt_postfix"] = postfix
     args["target_id"] = target_id
@@ -368,23 +408,23 @@ shortcut_js = """
 <script>
 function shortcuts(e) {
 
-    if (e.key.toLowerCase() == "s" && e.shiftKey) {
+    if (e.key.toLowerCase() == "s" && e.altKey) {
         document.getElementById("button_save").click();
     }
-    if (e.key.toLowerCase() == "w" && e.shiftKey) {
+    if (e.key.toLowerCase() == "w" && e.altKey) {
         document.getElementById("button_up").click();
     }
-    if (e.key.toLowerCase() == "x" && e.shiftKey) {
+    if (e.key.toLowerCase() == "x" && e.altKey) {
         document.getElementById("button_down").click();
     }
-    if (e.key.toLowerCase() == "r" && e.shiftKey) {
+    if (e.key.toLowerCase() == "r" && e.altKey) {
         document.getElementById("button_replace").click();
     }
-    if (e.key.toLowerCase() == "g" && e.shiftKey) {
-        document.getElementById("button_translate_gpt").click();
+    if (e.key.toLowerCase() == "q" && e.altKey) {
+        document.getElementById("button_translate_model1").click();
     }
-    if (e.key.toLowerCase() == "b" && e.shiftKey) {
-        document.getElementById("button_translate_baidu").click();
+    if (e.key.toLowerCase() == "e" && e.altKey) {
+        document.getElementById("button_translate_model2").click();
     }
     
 }
@@ -393,7 +433,7 @@ document.addEventListener('keyup', shortcuts, false);
 """
 
 with gr.Blocks(theme=Theme1(),head=shortcut_js) as demo:
-    gr.Markdown("# <center>EasyTranslator v1.0.6</center> ",visible=True)
+    gr.Markdown("# <center>EasyTranslator v1.1.0</center> ",visible=True)
     # 文本编辑页
     with gr.Tab("文本编辑"):
         gr.Markdown("## 文本编辑及保存区")
@@ -410,14 +450,17 @@ with gr.Blocks(theme=Theme1(),head=shortcut_js) as demo:
                     text_name = gr.Textbox(label = "Name")
                     text_text = gr.Textbox(label = "Text", lines=10,show_copy_button=True)
                     button_save = gr.Button("SAVE FILE",scale= 2,elem_id = "button_save")
+                    dropdown_model1 = gr.Dropdown(choices=model_list,value=args["selected_model"][0], label = "Model1",interactive=True)
+                    dropdown_model2 = gr.Dropdown(choices=model_list,value=args["selected_model"][1], label = "Model2",interactive=True)
+                    
                 with gr.Column():
                     text_name_cn = gr.Textbox(label = "Name_CN")
                     with gr.Row():
-                        text_gpt = gr.Textbox(label = "GPT", lines=3,show_copy_button=True,interactive = True)
-                        button_translate_gpt = gr.Button("Translate(GPT)",elem_id = "button_translate_gpt")
+                        text_model1 = gr.Textbox(lines=3,show_copy_button=True,interactive = True)
+                        button_translate_model1 = gr.Button("Translate(Model1)",elem_id = "button_translate_model1")
                     with gr.Row():
-                        text_baidu = gr.Textbox(label = "Baidu", lines=3,show_copy_button=True,interactive = True)    
-                        button_translate_baidu = gr.Button("Translate(Baidu)",elem_id = "button_translate_baidu")
+                        text_model2 = gr.Textbox(lines=3,show_copy_button=True,interactive = True)
+                        button_translate_model2 = gr.Button("Translate(Model2)",elem_id = "button_translate_model2")
                     text_final = gr.Textbox(label = "Text_CN", lines=3,show_copy_button=True,interactive = True)
                     with gr.Row():
                         button_up = gr.Button("↑",elem_id = "button_up")
@@ -431,11 +474,11 @@ with gr.Blocks(theme=Theme1(),head=shortcut_js) as demo:
                     text_name_cn = gr.Textbox(label = "Name_CN")
                 with gr.Column():
                     with gr.Row():
-                        text_gpt = gr.Textbox(label = "GPT", lines=3,show_copy_button=True,interactive = True)
-                        button_translate_gpt = gr.Button("Translate(GPT)")
+                        text_model1 = gr.Textbox(lines=3,show_copy_button=True,interactive = True)
+                        button_translate_model1 = gr.Button("Translate(GPT)")
                     with gr.Row():
-                        text_baidu = gr.Textbox(label = "Baidu", lines=3,show_copy_button=True,interactive = True)    
-                        button_translate_baidu = gr.Button("Translate(Baidu)")
+                        text_model2 = gr.Textbox(lines=3,show_copy_button=True,interactive = True)
+                        button_translate_model2 = gr.Button("Translate(Baidu)")
                     text_text = gr.Textbox(label = "Text", lines=3,show_copy_button=True)
                     text_final = gr.Textbox(label = "Text_CN", lines=3,show_copy_button=True,interactive = True)
                     with gr.Row():
@@ -448,7 +491,7 @@ with gr.Blocks(theme=Theme1(),head=shortcut_js) as demo:
             text_translate_start_id = gr.Textbox(label = "起始句id")
             text_translate_end_id = gr.Textbox(label = "结束句id")
         with gr.Row():
-            radio_translator = gr.Radio(choices = ["Baidu","Gpt3"],label = "接口")
+            dropdown_model_batch = gr.Dropdown(choices=model_list,value=args["selected_model"][0], label = "批量翻译Model",interactive=True)
             label_progress = gr.Label(label = "进度条",value="")
         checkbox_if_save_translation = gr.Checkbox(value= False, label = "翻译完成后直接保存JSON")
         button_batch_translate = gr.Button("批量翻译")   
@@ -501,6 +544,7 @@ with gr.Blocks(theme=Theme1(),head=shortcut_js) as demo:
                 file_target_json = gr.File(file_types=["json"],file_count = "multiple",label="Input JSON")
                 button_convert2csv =  gr.Button("Convert")
             file_result_csv = gr.File(file_types=["jcsv"],label="Output CSV",interactive=False)
+            
     # 文件合并页
     with gr.Tab("文件合并"):
         gr.Markdown("## 合并JSON文件")
@@ -531,28 +575,33 @@ with gr.Blocks(theme=Theme1(),head=shortcut_js) as demo:
 
     # API设置页
     with gr.Tab("API Settings"):
-        gr.Markdown("## 百度 API")
-        text_baidu_api_id = gr.Textbox(label="Baidu API Id",value = args["baidu_api_settings"]["api_id"])
-        text_baidu_api_key = gr.Textbox(label="Baidu API Key", value = args["baidu_api_settings"]["api_key"])
-        with gr.Row():
-            text_from_lang = gr.Textbox(label="From Lang",value = args["baidu_api_settings"]["from_lang"])
-            text_to_lang = gr.Textbox(label="To Lang",value = args["baidu_api_settings"]["to_lang"])
-        gr.Markdown("## OPENAI API")
-        text_openai_api = gr.Textbox(label="OPENAI API Key",value = args["openai_api_settings"]["openai_api_key"])
+        gr.Markdown("## 目标id")
+        text_target_id = gr.Textbox(label="Target Id",value = args["target_id"])
+        gr.Markdown("## API KEY")
+        dropdown_apikey = gr.Dropdown(list(args["API_KEYS"].keys()), value="OPENAI_API_KEY",label = "填写API KEY",interactive=True)
+        text_apikey = gr.Textbox(label="API KEY",value = args["API_KEYS"]["OPENAI_API_KEY"])
         with gr.Row():
             text_prefix = gr.Textbox(label="Prompt Prefix",value = args["openai_api_settings"]["prompt_prefix"])
             text_postfix = gr.Textbox(label="Prompt Postfix",value = args["openai_api_settings"]["prompt_postfix"])
-        gr.Markdown("## 目标id")
-        text_target_id = gr.Textbox(label="Target Id",value = args["target_id"])
+        gr.Markdown("## 百度 API")
+        text_model2_api_id = gr.Textbox(label="Baidu API Id",value = args["baidu_api_settings"]["api_id"])
+        text_model2_api_key = gr.Textbox(label="Baidu API Key", value = args["baidu_api_settings"]["api_key"])
+        with gr.Row():
+            text_from_lang = gr.Textbox(label="From Lang",value = args["baidu_api_settings"]["from_lang"])
+            text_to_lang = gr.Textbox(label="To Lang",value = args["baidu_api_settings"]["to_lang"])
         button_api_submit = gr.Button("Submit")
-    
     
     # 标签页行为
     tab_context.select(refresh_context, inputs=[text_id,text_context_length,radio_context_type],outputs=[dataframe_context,text_refresh_id])
     
+    # 下拉选框行为
+    dropdown_model1.change(change_model_name0, inputs = [text_id,dropdown_model1], outputs=[text_model1])
+    dropdown_model2.change(change_model_name1, inputs = [text_id,dropdown_model2], outputs=[text_model2])
+    dropdown_apikey.change(change_apikey, inputs=[dropdown_apikey], outputs=[text_apikey])
+    
     # 文本框行为
-    text_id.change(change_id, inputs = [text_id],
-                outputs = [text_file_path,text_text,text_name,text_name_cn,text_gpt,text_baidu,text_final])
+    text_id.change(change_id, inputs = [text_id,dropdown_model1,dropdown_model2],
+                outputs = [text_file_path,text_text,text_name,text_name_cn,text_model1,text_model2,text_final])
     text_id.change(get_remaining_text_num,inputs = None, outputs= [label_remaining_text])
     text_final.change(change_final,inputs = [text_final,text_id])
     text_name_cn.change(change_name,inputs = [text_name,text_name_cn,text_id])
@@ -564,16 +613,16 @@ with gr.Blocks(theme=Theme1(),head=shortcut_js) as demo:
         button_save_pos.click(save_last_position, inputs = [text_id])
     button_up.click(last_text, outputs = text_id)
     button_down.click(next_text, outputs = text_id)
-    button_translate_gpt.click(gpt_translate, 
-                            inputs=[text_text,text_id], outputs=text_gpt)
-    button_translate_baidu.click(baidu_translate, 
-                                inputs=[text_text,text_id], outputs=text_baidu)
+    button_translate_model1.click(llm_translate, 
+                            inputs=[text_text, text_id, dropdown_model1], outputs=text_model1)
+    button_translate_model2.click(llm_translate, 
+                                inputs=[text_text, text_id, dropdown_model2], outputs=text_model2)
     button_replace.click(replace, 
-                        inputs = [text_gpt,text_baidu,text_final,text_id], 
-                        outputs=[text_gpt,text_baidu,text_final])
+                        inputs = [dropdown_model1,dropdown_model2,text_model1,text_model2,text_final,text_id], 
+                        outputs=[text_model1,text_model2,text_final])
     button_save.click(save_json)
     
-    button_batch_translate.click(batch_translate, inputs = [radio_translator,checkbox_if_save_translation,text_translate_start_id,text_translate_end_id],
+    button_batch_translate.click(batch_translate, inputs = [dropdown_model_batch,checkbox_if_save_translation,text_translate_start_id,text_translate_end_id],
                                  outputs = [label_progress])
     
     # -预览及导出页
@@ -598,8 +647,8 @@ with gr.Blocks(theme=Theme1(),head=shortcut_js) as demo:
     
     # -API管理页
     button_api_submit.click(submit_api, 
-                            inputs = [text_baidu_api_id,text_baidu_api_key,text_from_lang,text_to_lang,
-                                      text_openai_api,text_prefix,text_postfix,text_target_id])
+                            inputs = [text_model2_api_id,text_model2_api_key,text_from_lang,text_to_lang,
+                                      dropdown_apikey,text_apikey,text_prefix,text_postfix,text_target_id])
 
 demo.queue()
 

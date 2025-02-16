@@ -1,7 +1,7 @@
 {
  "moyu_mode": "0",
  "if_save_id_immediately": "1",
- "last_edited_id": "100001001",
+ "last_edited_id": "100001002",
  "target_id": "100001005",
  "file_path": "./example_text.json",
  "context_half_length": "10",
@@ -15,6 +15,10 @@
   "text": "text",
   "name": "name"
  },
+ "selected_model": [
+  "baidu",
+  "gpt3"
+ ],
  "baidu_api_settings": {
   "api_id": "YOUR BAIDU API ID",
   "api_key": "YOUR BAIDU API KEY",
@@ -23,8 +27,17 @@
  },
  "openai_api_settings": {
   "openai_api_key": "YOUR OPENAI API KEY",
-  "prompt_prefix": "翻译为中文:",
+  "prompt_prefix": "将以下文字翻译为中文:",
   "prompt_postfix": "",
-  "time_limit": "15"
+  "time_limit": 15
+ },
+ "API_KEYS": {
+  "OPENAI_API_KEY": "YOUR OPENAI API KEY",
+  "GEMINI_API_KEY": "YOUR GEMINI API KEY (https://ai.google.dev/gemini-api/)",
+  "DASHSCOPE_API_KEY": "YOUR QWEN API KEY (https://help.aliyun.com/zh/model-studio/)",
+  "DEEPSEEK_API_KEY": "YOUR DEEPSEEK API KEY (https://api-docs.deepseek.com/)",
+  "ANTHROPIC_API_KEY": "YOUR CLAUDE API KEY (https://www.anthropic.com/api)",
+  "ARK_API_KEY": "YOUR DOUBAO API KEY (https://www.volcengine.com/product/doubao)",
+  "OPENROUTER_API_KEY": "YOUR OPENROUTER API KEY (https://openrouter.ai/)"
  }
 }

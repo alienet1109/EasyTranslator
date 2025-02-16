@@ -1,4 +1,4 @@
-# EasyTranslator v1.0.6
+# EasyTranslator v1.1.0
 基于gradio的汉化辅助工具
 
 ## 使用
@@ -48,18 +48,21 @@ python EasyTranslator.py
 然后在网页中打开程序给出的网址（eg: http://127.0.0.1:7860 ）
 <br><br>
 
+## v1.1.0更新内容
+1. 现支持通常翻译和批量翻译中gemini, claude, qwen, deepseek...等模型的自由选择和调用。请在`config.json`中或API页填写api key (注：当设置了OpenRouter的api时，会优先使用OpenRouter的接口)。使用gemini, claude, doubao等的官方接口请安装相关依赖包。可以自行修改`utils.py`中的MODEL_LIST以调整可选模型，避免冗余。
+2. 修改了键盘快捷键设置<br>
+    alt+w: ↑<br>
+    alt+x: ↓<br>
+    alt+s: save json<br>
+    alt+r: replace<br>
+    alt+q: model1 translate<br>
+    alt+e: model2 translate<br>
 
 ## v1.0.6更新内容
 1. 更新文件合并功能，方便多人协作。在文件合并页中可将依照指示将两个json文件合并，同步人工翻译进度。并支持导出小规模json文件方便传输。
 
 ## v1.0.5更新内容
-1. 支持键盘快捷键<br>
-    shift+w: ↑<br>
-    shift+x: ↓<br>
-    shift+s: save json<br>
-    shift+r: replace<br>
-    shift+g: gpt translate<br>
-    shift+b: baidu translate<br>
+1. 支持键盘快捷键
 
 ## v1.0.4更新内容
 1. 追加摸鱼模式, 将必要组件集中在半个屏幕内。在`config.json`中`moyu_mode`设为1开启, 设为0关闭

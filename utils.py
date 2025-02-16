@@ -4,8 +4,69 @@ import random
 import json
 from hashlib import md5
 from os import path as osp
+import os
 import csv
 import threading
+
+MODEL_NAME_DICT = {
+    "gpt-4":"openai/gpt-4",
+    "gpt-4o":"openai/gpt-4o",
+    "gpt-4o-mini":"openai/gpt-4o-mini",
+    "gpt-3.5-turbo":"openai/gpt-3.5-turbo",
+    "deepseek-r1":"deepseek/deepseek-r1",
+    "deepseek-v3":"deepseek/deepseek-chat",
+    "gemini-2":"google/gemini-2.0-flash-001",
+    "gemini-1.5":"google/gemini-flash-1.5",
+    "llama3-70b": "meta-llama/llama-3.3-70b-instruct",
+    "qwen-turbo":"qwen/qwen-turbo",
+    "qwen-plus":"qwen/qwen-plus",
+    "qwen-max":"qwen/qwen-max",
+    "qwen-2.5-72b":"qwen/qwen-2.5-72b-instruct",
+    "claude-3.5-sonnet":"anthropic/claude-3.5-sonnet",
+}
+
+def get_models(model_name):
+    # return the combination of llm, embedding and tokenizer
+    if os.getenv("OPENROUTER_API_KEY", default="") and "YOUR" not in os.getenv("OPENROUTER_API_KEY", default="") and model_name in MODEL_NAME_DICT:
+        from modules.llm.OpenRouter import OpenRouter
+        return OpenRouter(model=MODEL_NAME_DICT[model_name])
+    elif model_name == 'openai':
+        from modules.llm.LangChainGPT import LangChainGPT
+        return LangChainGPT()
+    elif model_name.startswith('gpt-3.5'):
+        from modules.llm.LangChainGPT import LangChainGPT
+        return LangChainGPT(model="gpt-3.5-turbo")
+    elif model_name == 'gpt-4':
+        from modules.llm.LangChainGPT import LangChainGPT
+        return LangChainGPT(model="gpt-4")
+    elif model_name == 'gpt-4o':
+        from modules.llm.LangChainGPT import LangChainGPT
+        return LangChainGPT(model="gpt-4o")
+    elif model_name == "gpt-4o-mini":
+        from modules.llm.LangChainGPT import LangChainGPT
+        return LangChainGPT(model="gpt-4o-mini")
+    elif model_name.startswith("claude-3-5"):
+        from modules.llm.Claude import Claude
+        return Claude(model="claude-3-5-sonnet-20241022")
+    elif model_name in ["qwen-turbo","qwen-plus","qwen-max"]:
+        from modules.llm.Qwen import Qwen
+        return Qwen(model = model_name)
+    elif model_name.startswith('doubao'):
+        from modules.llm.Doubao import Doubao
+        return Doubao()
+    elif model_name.startswith('gemini-2'):
+        from modules.llm.Gemini import Gemini
+        return Gemini("gemini-2.0-flash")
+    elif model_name.startswith('gemini-1.5'):
+        from modules.llm.Gemini import Gemini
+        return Gemini("gemini-1.5-flash")
+    elif model_name.startswith("deepseek"):
+        from modules.llm.DeepSeek import DeepSeek
+        return DeepSeek()
+    else:
+        print(f'Warning! undefined model {model_name}, use gpt-4o-mini instead.')
+        from modules.llm.LangChainGPT import LangChainGPT
+        return LangChainGPT()
 
 def load_config(filepath):
     with open(filepath, "r", encoding="utf-8") as file:
@@ -46,6 +107,7 @@ def get_baidu_completion(text,api_id,api_key,from_lang,to_lang):
 openai_api_key = args["openai_api_settings"]["openai_api_key"]
 time_limit = float(args["openai_api_settings"]["time_limit"])
 client = openai.OpenAI(api_key = openai_api_key)
+
 class GPTThread(threading.Thread):
     def __init__(self, model, messages, temperature):
         super().__init__()
@@ -63,19 +125,44 @@ class GPTThread(threading.Thread):
     )
         self.result = response.choices[0].message.content
     
-def get_gpt_completion(prompt, model="gpt-3.5-turbo",api_key = openai_api_key):
+def get_gpt_completion(prompt, time_limit = 10, model="gpt-40-mini"):
     messages = [{"role": "user", "content": prompt}]
     temperature = random.uniform(0,1)
     thread = GPTThread(model, messages,temperature)
     thread.start()
-    thread.join(10)
+    thread.join(time_limit)
     if thread.is_alive():
         thread.terminate()
         print("请求超时")
         return "TimeoutError", False
     else:
         return thread.result, True
-
+    
+class LLMThread(threading.Thread):
+    def __init__(self, llm, prompt, temperature):
+        super().__init__()
+        self.llm = llm
+        self.prompt = prompt
+        self.temperature = temperature
+        self.result = ""
+    def terminate(self):
+        self._running = False 
+    def run(self):
+        self.result = self.llm.chat(self.prompt, temperature = self.temperature)
+    
+def get_llm_completion(prompt, time_limit = 10, model_name="gpt-4o-mini"):
+    llm = get_models(model_name)
+    temperature = 0.7
+    thread = LLMThread(llm, prompt,temperature)
+    thread.start()
+    thread.join(time_limit)
+    if thread.is_alive():
+        thread.terminate()
+        print("请求超时")
+        return "TimeoutError", False
+    else:
+        return thread.result, True
+    
 def left_pad_zero(number, digit):
     number_str = str(number)
     padding_count = digit - len(number_str)
@@ -101,7 +188,7 @@ def convert_to_json(files, text_col, name_col, id_col):
         with open(path,"r",encoding="utf-8") as f:
             reader = csv.DictReader(f)
             line_num = sum(1 for _ in open(path,"r",encoding="utf-8"))
-            fieldnames = reader.fieldnames
+            fieldnames = reader.fieldnames if reader.fieldnames else []
             if id_col not in fieldnames:
                 ids = generate_ids(line_num)
                 i = 0

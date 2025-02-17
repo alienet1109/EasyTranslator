@@ -7,7 +7,7 @@ class LangChainGPT(BaseLLM):
 
     def __init__(self, model="gpt-4o-mini"):
         super(LangChainGPT, self).__init__()
-        self.client = OpenAI()
+        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self.model_name = model
         # add api_base        
         self.messages = []

@@ -23,6 +23,7 @@ MODEL_NAME_DICT = {
     "qwen-max":"qwen/qwen-max",
     "qwen-2.5-72b":"qwen/qwen-2.5-72b-instruct",
     "claude-3.5-sonnet":"anthropic/claude-3.5-sonnet",
+    "phi-4":"microsoft/phi-4",
 }
 
 def get_models(model_name):

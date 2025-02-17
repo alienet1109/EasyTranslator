@@ -1,5 +1,5 @@
 {
- "moyu_mode": "0",
+ "moyu_mode": "1",
  "if_save_id_immediately": "1",
  "last_edited_id": "100001002",
  "target_id": "100001005",
@@ -32,7 +32,7 @@
   "time_limit": 15
  },
  "API_KEYS": {
-  "OPENAI_API_KEY": "YOUR OPENAI API KEY",
+  "OPENAI_API_KEY": "YOUR OPENAI API KEY (https://platform.openai.com/docs/overview)",
   "GEMINI_API_KEY": "YOUR GEMINI API KEY (https://ai.google.dev/gemini-api/)",
   "DASHSCOPE_API_KEY": "YOUR QWEN API KEY (https://help.aliyun.com/zh/model-studio/)",
   "DEEPSEEK_API_KEY": "YOUR DEEPSEEK API KEY (https://api-docs.deepseek.com/)",

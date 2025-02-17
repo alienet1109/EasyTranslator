@@ -438,8 +438,8 @@ with gr.Blocks(theme=Theme1(),head=shortcut_js) as demo:
     with gr.Tab("文本编辑"):
         gr.Markdown("## 文本编辑及保存区")
         with gr.Row():
-            text_file_path = gr.Textbox(label = "File Path", value = args["file_path"])
-            text_id = gr.Textbox(label = "Text id",show_copy_button=True)
+            text_file_path = gr.Textbox(label = "File Path - 数据文件JSON路径", value = args["file_path"])
+            text_id = gr.Textbox(label = "Text id - 当前文本id",show_copy_button=True)
             button_load_pos = gr.Button("LOAD last edited position")
             if not if_save_id_immediately:
                 button_save_pos = gr.Button("SAVE last edited position")
@@ -447,21 +447,21 @@ with gr.Blocks(theme=Theme1(),head=shortcut_js) as demo:
             if not moyu_mode:
                 # 全屏mode
                 with gr.Column():
-                    text_name = gr.Textbox(label = "Name")
-                    text_text = gr.Textbox(label = "Text", lines=10,show_copy_button=True)
-                    button_save = gr.Button("SAVE FILE",scale= 2,elem_id = "button_save")
-                    dropdown_model1 = gr.Dropdown(choices=model_list,value=args["selected_model"][0], label = "Model1",interactive=True)
-                    dropdown_model2 = gr.Dropdown(choices=model_list,value=args["selected_model"][1], label = "Model2",interactive=True)
+                    text_name = gr.Textbox(label = "Name - 原文人名")
+                    text_text = gr.Textbox(label = "Text - 原文文本", lines=10,show_copy_button=True)
+                    button_save = gr.Button("SAVE JSON FILE",scale= 2,elem_id = "button_save")
+                    dropdown_model1 = gr.Dropdown(choices=model_list,value=args["selected_model"][0], label = "Choose Model1 - 选择模型1",interactive=True)
+                    dropdown_model2 = gr.Dropdown(choices=model_list,value=args["selected_model"][1], label = "Choose Model2 - 选择模型2",interactive=True)
                     
                 with gr.Column():
-                    text_name_cn = gr.Textbox(label = "Name_CN")
+                    text_name_cn = gr.Textbox(label = "Name_CN - 译文人名")
                     with gr.Row():
-                        text_model1 = gr.Textbox(lines=3,show_copy_button=True,interactive = True)
+                        text_model1 = gr.Textbox(label="Model1 - 模型1译文",lines=3,show_copy_button=True,interactive = True)
                         button_translate_model1 = gr.Button("Translate(Model1)",elem_id = "button_translate_model1")
                     with gr.Row():
-                        text_model2 = gr.Textbox(lines=3,show_copy_button=True,interactive = True)
+                        text_model2 = gr.Textbox(label="Model2 - 模型2译文",lines=3,show_copy_button=True,interactive = True)
                         button_translate_model2 = gr.Button("Translate(Model2)",elem_id = "button_translate_model2")
-                    text_final = gr.Textbox(label = "Text_CN", lines=3,show_copy_button=True,interactive = True)
+                    text_final = gr.Textbox(label = "Text_CN - 人工译文", lines=3,show_copy_button=True,interactive = True)
                     with gr.Row():
                         button_up = gr.Button("↑",elem_id = "button_up")
                         button_down = gr.Button("↓",elem_id = "button_down")
@@ -469,32 +469,35 @@ with gr.Blocks(theme=Theme1(),head=shortcut_js) as demo:
             else:
                 # 摸鱼mode
                 with gr.Column():
-                    button_save = gr.Button("SAVE FILE",scale= 2)
-                    text_name = gr.Textbox(label = "Name")
-                    text_name_cn = gr.Textbox(label = "Name_CN")
+                    dropdown_model1 = gr.Dropdown(choices=model_list,value=args["selected_model"][0], label = "Choose Model1 - 选择模型1",interactive=True)
+                    dropdown_model2 = gr.Dropdown(choices=model_list,value=args["selected_model"][1], label = "Choose Model2 - 选择模型2",interactive=True)
+                    text_name = gr.Textbox(label = "Name - 原文人名")
+                    text_name_cn = gr.Textbox(label = "Name_CN - 译文人名")
                 with gr.Column():
                     with gr.Row():
-                        text_model1 = gr.Textbox(lines=3,show_copy_button=True,interactive = True)
-                        button_translate_model1 = gr.Button("Translate(GPT)")
+                        text_model1 = gr.Textbox(label="Model1 - 模型1译文",lines=3,show_copy_button=True,interactive = True)
+                        button_translate_model1 = gr.Button("Translate(Model1)",elem_id = "button_translate_model1")
                     with gr.Row():
-                        text_model2 = gr.Textbox(lines=3,show_copy_button=True,interactive = True)
-                        button_translate_model2 = gr.Button("Translate(Baidu)")
-                    text_text = gr.Textbox(label = "Text", lines=3,show_copy_button=True)
-                    text_final = gr.Textbox(label = "Text_CN", lines=3,show_copy_button=True,interactive = True)
+                        text_model2 = gr.Textbox(label="Model2 - 模型2译文",lines=3,show_copy_button=True,interactive = True)
+                        button_translate_model2 = gr.Button("Translate(Model2)",elem_id = "button_translate_model2")
+                    text_text = gr.Textbox(label = "Text - 原文文本", lines=3,show_copy_button=True)
+                    text_final = gr.Textbox(label = "Text_CN - 人工译文", lines=3,show_copy_button=True,interactive = True)
                     with gr.Row():
-                        button_up = gr.Button("↑")
-                        button_down = gr.Button("↓")
-                        button_replace = gr.Button("Replace")
+                        button_up = gr.Button("↑",elem_id = "button_up")
+                        button_down = gr.Button("↓",elem_id = "button_down")
+                        button_replace = gr.Button("Replace",elem_id = "button_replace")
+                    button_save = gr.Button("SAVE JSON FILE",scale= 2,elem_id = "button_save")
+                    
         label_remaining_text = gr.Label(label="进度",value = "目标剩余???条")
         gr.Markdown("## 批量机翻区")
         with gr.Row():
             text_translate_start_id = gr.Textbox(label = "起始句id")
             text_translate_end_id = gr.Textbox(label = "结束句id")
         with gr.Row():
-            dropdown_model_batch = gr.Dropdown(choices=model_list,value=args["selected_model"][0], label = "批量翻译Model",interactive=True)
+            dropdown_model_batch = gr.Dropdown(choices=model_list,value=args["selected_model"][0], label = "批量翻译模型选择",interactive=True)
             label_progress = gr.Label(label = "进度条",value="")
-        checkbox_if_save_translation = gr.Checkbox(value= False, label = "翻译完成后直接保存JSON")
-        button_batch_translate = gr.Button("批量翻译")   
+        checkbox_if_save_translation = gr.Checkbox(value= False, label = "翻译完成后直接保存文件")
+        button_batch_translate = gr.Button("开始批量翻译")   
             
     tab_context = gr.Tab("文本预览及导出")
     with tab_context:
@@ -502,14 +505,14 @@ with gr.Blocks(theme=Theme1(),head=shortcut_js) as demo:
         with gr.Row():
             with gr.Column():
                 with gr.Row():
-                    text_refresh_id = gr.Textbox(label = "编号", value = args["last_edited_id"])
+                    text_refresh_id = gr.Textbox(label = "Text id - 当前文本id", value = args["last_edited_id"])
                     text_context_length = gr.Textbox(label = "上下文长度", value = args["context_half_length"])
                 radio_context_type = gr.Radio(choices = ["上下文","上文", "下文"], label = "预览模式",value="下文")
             with gr.Column():
                 with gr.Row():
                     button_refresh = gr.Button("Refresh")
                     button_save_context = gr.Button("Save Changes")
-                checkbox_if_save_context = gr.Checkbox(value= False, label = "修改直接保存JSON")
+                checkbox_if_save_context = gr.Checkbox(value= False, label = "修改直接存入json文件")
         dataframe_context = gr.DataFrame(headers=['id','name','name_CN','text','text_CN'],
                                          interactive=True) 
         gr.Markdown("## 文档导出区")
@@ -541,9 +544,9 @@ with gr.Blocks(theme=Theme1(),head=shortcut_js) as demo:
         gr.Markdown("## JSON to CSV(支持批量上传)")
         with gr.Row():
             with gr.Column():
-                file_target_json = gr.File(file_types=["json"],file_count = "multiple",label="Input JSON")
+                file_target_json = gr.File(file_types=[".json"],file_count = "multiple",label="Input JSON")
                 button_convert2csv =  gr.Button("Convert")
-            file_result_csv = gr.File(file_types=["jcsv"],label="Output CSV",interactive=False)
+            file_result_csv = gr.File(file_types=[".csv"],label="Output CSV",interactive=False)
             
     # 文件合并页
     with gr.Tab("文件合并"):
@@ -553,8 +556,8 @@ with gr.Blocks(theme=Theme1(),head=shortcut_js) as demo:
                 若起止id顺序颠倒或不存在，按钮不会作用。请仔细检查并做好备份！！")
         with gr.Column():
   
-            text_merged_path = gr.Textbox(label = "File Path", value = args["file_path"])
-            file_merging_json = gr.File(file_types=["json"],file_count = "single", label="File to be merged")
+            text_merged_path = gr.Textbox(label = "File Path - 被覆盖的文件地址", value = args["file_path"])
+            file_merging_json = gr.File(file_types=["json"],file_count = "single", label="File to be merged - 用于覆盖的文件")
             with gr.Row():
                 text_merge_start_id = gr.Textbox(label="起始句id",value = "")
                 text_merge_end_id  = gr.Textbox(label="结束句id",value = "")

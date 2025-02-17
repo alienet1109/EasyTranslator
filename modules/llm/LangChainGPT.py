@@ -1,7 +1,6 @@
 from .BaseLLM import BaseLLM
 from openai import OpenAI
 import os
-from transformers import AutoModelForCausalLM, AutoTokenizer
 
 class LangChainGPT(BaseLLM):
 

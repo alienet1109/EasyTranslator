@@ -469,10 +469,10 @@ with gr.Blocks(theme=Theme1(),head=shortcut_js) as demo:
             else:
                 # 摸鱼mode
                 with gr.Column():
-                    dropdown_model1 = gr.Dropdown(choices=model_list,value=args["selected_model"][0], label = "Choose Model1 - 选择模型1",interactive=True)
-                    dropdown_model2 = gr.Dropdown(choices=model_list,value=args["selected_model"][1], label = "Choose Model2 - 选择模型2",interactive=True)
                     text_name = gr.Textbox(label = "Name - 原文人名")
                     text_name_cn = gr.Textbox(label = "Name_CN - 译文人名")
+                    dropdown_model1 = gr.Dropdown(choices=model_list,value=args["selected_model"][0], label = "Choose Model1 - 选择模型1",interactive=True)
+                    dropdown_model2 = gr.Dropdown(choices=model_list,value=args["selected_model"][1], label = "Choose Model2 - 选择模型2",interactive=True)
                 with gr.Column():
                     with gr.Row():
                         text_model1 = gr.Textbox(label="Model1 - 模型1译文",lines=3,show_copy_button=True,interactive = True)

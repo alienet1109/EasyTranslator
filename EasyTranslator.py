@@ -11,7 +11,7 @@ from themes import *
 config_path = osp.join(osp.dirname(osp.abspath(__file__)),"./config.json")
 args = load_config(config_path)
 
-model_list = list(MODEL_NAME_DICT.keys()) + ["gpt3","baidu"]
+model_list = list(MODEL_NAME_DICT.keys()) + ["baidu"]
 for key, value in args["API_KEYS"].items():
     if "API_KEY" in key and "YOUR" not in value:
         os.environ[key] = value
@@ -63,22 +63,12 @@ def llm_translate(text, text_id, model_name):
         return ""
     if model_name == "baidu":
         return baidu_translate(text,text_id)
-    elif model_name == "gpt3":
-        return gpt_translate(text,text_id)
     text = text.replace("\n"," ")
     prompt = args["openai_api_settings"]["prompt_prefix"]+text+args["openai_api_settings"]["prompt_postfix"]
     translation, if_succ = get_llm_completion(prompt, time_limit=int(time_limit), model_name=model_name)
     if dic[text_id]["text"].replace("\n"," ") == text and if_succ:
         dic[text_id][model_name] = translation  
     save_config(args,config_path)  
-    return translation
-
-def gpt_translate(text,text_id):
-    text = text.replace("\n"," ")
-    prompt = args["openai_api_settings"]["prompt_prefix"]+text+args["openai_api_settings"]["prompt_postfix"]
-    translation, if_succ = get_gpt_completion(prompt, time_limit=int(time_limit))
-    if dic[text_id]["text"].replace("\n"," ") == text and if_succ:
-        dic[text_id]["gpt3"] = translation
     return translation
 
 def baidu_translate(text,text_id):

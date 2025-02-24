@@ -9,6 +9,7 @@ import csv
 import threading
 
 MODEL_NAME_DICT = {
+    "gpt3":"openai/gpt-3.5-turbo",
     "gpt-4":"openai/gpt-4",
     "gpt-4o":"openai/gpt-4o",
     "gpt-4o-mini":"openai/gpt-4o-mini",
@@ -104,40 +105,7 @@ def get_baidu_completion(text,api_id,api_key,from_lang,to_lang):
     result = r.json()
     return result["trans_result"][0]["dst"]
 
-# OPENAI preparation
-openai_api_key = args["openai_api_settings"]["openai_api_key"]
 time_limit = float(args["openai_api_settings"]["time_limit"])
-client = openai.OpenAI(api_key = openai_api_key)
-
-class GPTThread(threading.Thread):
-    def __init__(self, model, messages, temperature):
-        super().__init__()
-        self.model = model
-        self.messages = messages
-        self.temperature = temperature
-        self.result = ""
-    def terminate(self):
-        self._running = False 
-    def run(self):
-        response = client.chat.completions.create(
-        model=self.model,
-        messages=self.messages,
-        temperature=self.temperature, 
-    )
-        self.result = response.choices[0].message.content
-    
-def get_gpt_completion(prompt, time_limit = 10, model="gpt-40-mini"):
-    messages = [{"role": "user", "content": prompt}]
-    temperature = random.uniform(0,1)
-    thread = GPTThread(model, messages,temperature)
-    thread.start()
-    thread.join(time_limit)
-    if thread.is_alive():
-        thread.terminate()
-        print("请求超时")
-        return "TimeoutError", False
-    else:
-        return thread.result, True
     
 class LLMThread(threading.Thread):
     def __init__(self, llm, prompt, temperature):

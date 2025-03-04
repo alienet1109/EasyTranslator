@@ -10,7 +10,7 @@ class Qwen(BaseLLM):
         self.client = OpenAI(
         api_key=os.getenv("DASHSCOPE_API_KEY"), 
         base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
-    )
+        )
         self.model_name = model
         # add api_base        
         self.messages = []

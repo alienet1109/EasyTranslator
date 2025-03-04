@@ -34,8 +34,6 @@ pip install -r requirements.txt
    - 如果未指定ID列，程序将自动生成ID
 
 **JSON文件格式**
-
-JSON文件应满足以下结构：
 - 使用 `id` 作为键
 - 值为包含 `name` 和 `text` 的字典
 - 按文本顺序正序排序
@@ -46,6 +44,7 @@ JSON文件应满足以下结构：
     "001001": {"name": "A", "text": "第一段文本"},
     "001002": {"name": "B", "text": "第二段文本"}
 }
+```
 
 #### 3. 修改配置文件`config.json`
 * 必须：

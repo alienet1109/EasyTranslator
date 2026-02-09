@@ -1,4 +1,4 @@
-# EasyTranslator v1.1.0
+# EasyTranslator v1.1.1
 基于gradio的汉化辅助工具
 
 ## 使用
@@ -61,6 +61,8 @@ python EasyTranslator.py
 ```
 然后在网页中打开程序给出的网址（eg: http://127.0.0.1:7860 ）
 <br><br>
+## v1.1.1更新内容
+允许自定义API接口url、model_name，兼容更广泛的模型库
 
 ## v1.1.0更新内容
 1. 现支持通常翻译和批量翻译中gemini, claude, qwen, deepseek...等模型的自由选择和调用。请在`config.json`中或API页填写api key (注：当设置了OpenRouter的api时，会优先使用OpenRouter的接口)。使用gemini, claude, doubao等的官方接口请安装相关依赖包。可以自行修改`utils.py`中的MODEL_LIST以调整可选模型，避免冗余。

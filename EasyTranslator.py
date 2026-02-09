@@ -11,7 +11,12 @@ from themes import *
 config_path = osp.join(osp.dirname(osp.abspath(__file__)),"./config.json")
 args = load_config(config_path)
 
-model_list = list(MODEL_NAME_DICT.keys()) + ["baidu"]
+# 初始化自定义模型配置
+if "custom_models" not in args or not isinstance(args["custom_models"], dict):
+    args["custom_models"] = {}
+
+custom_model_names = list(args["custom_models"].keys())
+model_list = list(MODEL_NAME_DICT.keys()) + custom_model_names + ["baidu"]
 for key, value in args["API_KEYS"].items():
     if "API_KEY" in key and "YOUR" not in value:
         os.environ[key] = value
@@ -186,6 +191,47 @@ def change_name(name,name_cn,text_id):
 
 def change_apikey(dropdown_apikey):
     return args["API_KEYS"][dropdown_apikey] if dropdown_apikey in args["API_KEYS"] else ""
+
+def add_custom_model(alias, base_url, model_name, api_key):
+    """
+    添加/更新一个自定义 OpenAI 兼容模型。
+    alias: 在下拉框中展示的名称，也是 model_name 传给 get_llm_completion 的值
+    """
+    alias = (alias or "").strip()
+    base_url = (base_url or "").strip()
+    model_name = (model_name or "").strip()
+    api_key = (api_key or "").strip()
+
+    if not alias or not model_name:
+        gr.Warning("自定义模型名称和 Model Name 不能为空")
+        # 不改变现有下拉框，仅返回默认更新对象
+        return gr.update(), gr.update(), gr.update()
+
+    custom_models = args.get("custom_models", {})
+    custom_models[alias] = {
+        "base_url": base_url if base_url else "https://api.openai.com/v1",
+        "model_name": model_name,
+        "api_key": api_key,
+    }
+    args["custom_models"] = custom_models
+    save_config(args, config_path)
+
+    # 弹窗提示，包含下拉显示名和真实 model_name
+    gr.Info(f"自定义模型添加成功：下拉显示名 = '{alias}', model_name = '{model_name}'")
+
+    # 同时更新环境变量，方便后端按需使用
+    if api_key:
+        os.environ[f"CUSTOM_API_KEY_{alias}"] = api_key
+
+    # 更新全局模型列表与下拉框 choices
+    global model_list
+    custom_names = list(custom_models.keys())
+    model_list = list(MODEL_NAME_DICT.keys()) + custom_names + ["baidu"]
+    return (
+        gr.update(choices=model_list),
+        gr.update(choices=model_list),
+        gr.update(choices=model_list),
+    )
     
 def save_json(show_info = True):
     global altered_text_finals
@@ -362,10 +408,15 @@ def merge_json(merged_path,file_merging_json,text_start_id,text_end_id,type):
     with open(path, "r", encoding ="utf8") as json_file:
         dic_new = json.load(json_file)
     for idx in range(idx_dic_merge[text_start_id],idx_dic_merge[text_end_id] + 1):
+        key = id_lis_merge[idx]
+        # 仅在待合并文件中存在对应 id 时才进行合并，避免 KeyError
+        if key not in dic_new:
+            continue
         if type == "仅人工翻译":
-            dic_merge[id_lis_merge[idx]]['text_CN'] = dic_new[id_lis_merge[idx]]['text_CN']
+            if 'text_CN' in dic_new[key]:
+                dic_merge[key]['text_CN'] = dic_new[key]['text_CN']
         else:
-            dic_merge[id_lis_merge[idx]] = dic_new[id_lis_merge[idx]]
+            dic_merge[key] = dic_new[key]
     with open(merged_path, "w", encoding ="utf8") as json_file:
         json.dump(dic_merge,json_file,indent = 1,ensure_ascii = False)
     gr.Info(f"合并成功，共更新{idx_dic_merge[text_end_id] - idx_dic_merge[text_start_id] + 1}条译文")
@@ -583,6 +634,15 @@ with gr.Blocks(theme=Theme1(),head=shortcut_js) as demo:
             text_from_lang = gr.Textbox(label="From Lang",value = args["baidu_api_settings"]["from_lang"])
             text_to_lang = gr.Textbox(label="To Lang",value = args["baidu_api_settings"]["to_lang"])
         button_api_submit = gr.Button("Submit")
+
+        gr.Markdown("## 自定义 OpenAI 兼容模型")
+        with gr.Row():
+            text_custom_alias = gr.Textbox(label="模型标识（下拉显示名）", placeholder="如 my-gpt-4o")
+            text_custom_base_url = gr.Textbox(label="Base URL", value="https://api.openai.com/v1/chat/completions")
+        with gr.Row():
+            text_custom_model_name = gr.Textbox(label="Model Name", placeholder="如 gpt-4o-mini")
+            text_custom_api_key = gr.Textbox(label="API Key", type="password")
+        button_add_custom_model = gr.Button("添加自定义模型")
     
     # 标签页行为
     tab_context.select(refresh_context, inputs=[text_id,text_context_length,radio_context_type],outputs=[dataframe_context,text_refresh_id])
@@ -642,6 +702,11 @@ with gr.Blocks(theme=Theme1(),head=shortcut_js) as demo:
     button_api_submit.click(submit_api, 
                             inputs = [text_model2_api_id,text_model2_api_key,text_from_lang,text_to_lang,
                                       dropdown_apikey,text_apikey,text_prefix,text_postfix,text_target_id])
+    button_add_custom_model.click(
+        add_custom_model,
+        inputs=[text_custom_alias, text_custom_base_url, text_custom_model_name, text_custom_api_key],
+        outputs=[dropdown_model1, dropdown_model2, dropdown_model_batch],
+    )
 
 demo.queue()
 

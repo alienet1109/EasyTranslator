@@ -29,6 +29,21 @@ MODEL_NAME_DICT = {
 
 def get_models(model_name):
     # return the combination of llm, embedding and tokenizer
+    # 1. 先检查配置文件中是否存在同名的自定义 OpenAI 兼容模型
+    try:
+        runtime_args = load_config(smart_path("./config.json"))
+        custom_models = runtime_args.get("custom_models", {})
+    except Exception:
+        custom_models = {}
+    if model_name in custom_models:
+        from modules.llm.CustomOpenAI import CustomOpenAI
+        conf = custom_models[model_name]
+        base_url = conf.get("base_url", "https://api.openai.com/v1")
+        api_key = conf.get("api_key", os.getenv("OPENAI_API_KEY", ""))
+        real_model = conf.get("model_name", "gpt-4o-mini")
+        return CustomOpenAI(base_url=base_url, api_key=api_key, model=real_model)
+
+    # 2. 其余仍按原有分支处理
     if os.getenv("OPENROUTER_API_KEY", default="") and "YOUR" not in os.getenv("OPENROUTER_API_KEY", default="") and model_name in MODEL_NAME_DICT:
         from modules.llm.OpenRouter import OpenRouter
         return OpenRouter(model=MODEL_NAME_DICT[model_name])

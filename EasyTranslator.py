@@ -711,4 +711,4 @@ with gr.Blocks(theme=Theme1(),head=shortcut_js) as demo:
 demo.queue()
 
 if __name__=="__main__":
-    demo.launch(show_error=True)
+    demo.launch(show_error=True, server_name="0.0.0.0")
